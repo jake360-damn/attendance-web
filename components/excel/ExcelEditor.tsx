@@ -125,38 +125,25 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
         throw new Error('获取用户信息失败，请重新登录')
       }
 
-      // 先检查profiles表是否有该用户记录
-      const { data: existingProfile } = await supabase
+      // 使用 upsert 创建或更新用户资料（只提供必要字段）
+      console.log('创建/更新用户资料...')
+      const { error: profileError } = await supabase
         .from('profiles')
-        .select('id')
-        .eq('id', userId)
-        .single()
+        .upsert({
+          id: userId,
+          email: userData.user.email || '',
+          full_name: userData.user.user_metadata?.full_name || '',
+        } as any, {
+          onConflict: 'id',
+          ignoreDuplicates: false
+        })
 
-      // 如果没有profile记录，创建一个（不指定时间戳，让数据库使用默认值）
-      if (!existingProfile) {
-        console.log('创建用户资料...')
-        const { data: newProfile, error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: userId,
-            email: userData.user.email || '',
-            full_name: userData.user.user_metadata?.full_name || '',
-            role: 'user',
-          } as any)
-          .select()
-          .single()
-
-        if (profileError) {
-          console.error('创建用户资料失败:', profileError)
-          throw new Error('创建用户资料失败，无法保存文件: ' + profileError.message)
-        }
-        
-        if (!newProfile) {
-          throw new Error('创建用户资料失败，未返回数据')
-        }
-        
-        console.log('用户资料创建成功:', newProfile)
+      if (profileError) {
+        console.error('创建用户资料失败:', profileError)
+        throw new Error('创建用户资料失败，无法保存文件: ' + profileError.message)
       }
+      
+      console.log('用户资料创建/更新成功')
 
       // 保存文件信息
       const { data: fileData, error: fileError } = await supabase
