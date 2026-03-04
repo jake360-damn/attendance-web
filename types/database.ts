@@ -109,6 +109,7 @@ export interface Database {
           updated_at: string
           is_shared: boolean
           shared_by: string | null
+          original_headers: string[] | null
         }
         Insert: {
           id?: string
@@ -120,6 +121,7 @@ export interface Database {
           updated_at?: string
           is_shared?: boolean
           shared_by?: string | null
+          original_headers?: string[] | null
         }
         Update: {
           id?: string
@@ -131,6 +133,7 @@ export interface Database {
           updated_at?: string
           is_shared?: boolean
           shared_by?: string | null
+          original_headers?: string[] | null
         }
         Relationships: [
           {
