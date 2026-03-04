@@ -112,9 +112,29 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
       return
     }
     
+    if (!userId) {
+      alert('用户未登录，请先登录')
+      return
+    }
+    
     setSaving(true)
     try {
-      // 先保存文件信息
+      // 先尝试创建/更新用户资料（如果不存在）
+      const { data: userData } = await supabase.auth.getUser()
+      if (userData?.user) {
+        await supabase.from('profiles').upsert({
+          id: userId,
+          email: userData.user.email,
+          full_name: userData.user.user_metadata?.full_name || '',
+          role: 'user',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        } as any, {
+          onConflict: 'id'
+        })
+      }
+
+      // 保存文件信息
       const { data: fileData, error: fileError } = await supabase
         .from('excel_files')
         .insert({
@@ -126,7 +146,15 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
         .select()
         .single()
 
-      if (fileError) throw fileError
+      if (fileError) {
+        console.error('文件保存错误:', fileError)
+        throw new Error('文件保存失败: ' + fileError.message)
+      }
+
+      // 检查 fileData 是否存在
+      if (!fileData || !(fileData as any).id) {
+        throw new Error('文件保存失败，未返回文件ID')
+      }
 
       // 保存考勤记录
       const attendanceRecords = rows.map(row => {
@@ -157,7 +185,10 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
         .from('attendance_records')
         .insert(attendanceRecords as any)
 
-      if (recordsError) throw recordsError
+      if (recordsError) {
+        console.error('考勤记录保存错误:', recordsError)
+        throw new Error('考勤记录保存失败: ' + recordsError.message)
+      }
 
       alert('保存成功！')
     } catch (error: any) {
