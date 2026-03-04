@@ -120,6 +120,17 @@ export default function FileList({ currentUser, onSelectFile, onViewHistory }: F
           description: `删除了文件 "${fileName}"`,
         })
 
+      // 删除原始数据
+      const { error: rawDataError } = await supabase
+        .from('excel_data_raw')
+        .delete()
+        .eq('file_id', fileId)
+
+      if (rawDataError) {
+        console.error('删除原始数据失败:', rawDataError)
+      }
+
+      // 删除考勤记录（兼容旧数据）
       const { error: recordsError } = await supabase
         .from('attendance_records')
         .delete()
