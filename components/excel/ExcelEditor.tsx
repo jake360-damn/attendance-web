@@ -119,19 +119,40 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
     
     setSaving(true)
     try {
-      // 先尝试创建/更新用户资料（如果不存在）
-      const { data: userData } = await supabase.auth.getUser()
-      if (userData?.user) {
-        await supabase.from('profiles').upsert({
-          id: userId,
-          email: userData.user.email,
-          full_name: userData.user.user_metadata?.full_name || '',
-          role: 'user',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        } as any, {
-          onConflict: 'id'
-        })
+      // 先获取当前用户信息
+      const { data: userData, error: userError } = await supabase.auth.getUser()
+      if (userError || !userData?.user) {
+        throw new Error('获取用户信息失败，请重新登录')
+      }
+
+      // 先检查profiles表是否有该用户记录
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', userId)
+        .single()
+
+      // 如果没有profile记录，创建一个
+      if (!existingProfile) {
+        console.log('创建用户资料...')
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: userId,
+            email: userData.user.email || '',
+            full_name: userData.user.user_metadata?.full_name || '',
+            role: 'user',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          } as any)
+
+        if (profileError) {
+          console.error('创建用户资料失败:', profileError)
+          // 如果是RLS错误，继续尝试保存文件
+          if (!profileError.message.includes('row-level security')) {
+            throw new Error('创建用户资料失败: ' + profileError.message)
+          }
+        }
       }
 
       // 保存文件信息
