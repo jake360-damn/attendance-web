@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import * as XLSX from 'xlsx'
-import { Upload, FileSpreadsheet, AlertCircle } from 'lucide-react'
+import { Upload, FileSpreadsheet, AlertCircle, Cloud, FileCheck } from 'lucide-react'
 
 interface ExcelUploaderProps {
   onUpload: (data: any) => void
@@ -100,9 +100,13 @@ export default function ExcelUploader({ onUpload }: ExcelUploaderProps) {
   return (
     <div className="space-y-4">
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-600 p-4 rounded-lg flex items-center gap-2">
-          <AlertCircle className="w-5 h-5" />
-          {error}
+        <div className="card p-4 bg-red-50 border-red-200 animate-fade-in">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <AlertCircle className="w-4 h-4 text-red-600" />
+            </div>
+            <p className="text-red-700 font-medium">{error}</p>
+          </div>
         </div>
       )}
 
@@ -111,11 +115,11 @@ export default function ExcelUploader({ onUpload }: ExcelUploaderProps) {
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         className={`
-          border-2 border-dashed rounded-xl p-12 text-center cursor-pointer
-          transition-colors duration-200
+          relative card p-12 text-center cursor-pointer
+          transition-all duration-300 ease-out
           ${isDragActive 
-            ? 'border-blue-500 bg-blue-50' 
-            : 'border-gray-300 hover:border-gray-400 bg-white'
+            ? 'border-blue-400 bg-blue-50/50 scale-[1.02] shadow-lg shadow-blue-500/10' 
+            : 'border-2 border-dashed border-gray-200 hover:border-blue-300 hover:bg-blue-50/30'
           }
         `}
       >
@@ -128,40 +132,76 @@ export default function ExcelUploader({ onUpload }: ExcelUploaderProps) {
         />
         <label htmlFor="excel-upload" className="cursor-pointer block">
           {uploading ? (
-            <div className="space-y-4">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="text-gray-600">正在解析文件...</p>
+            <div className="space-y-6 animate-fade-in">
+              <div className="relative inline-flex">
+                <div className="w-20 h-20 border-4 border-blue-200 rounded-full animate-spin border-t-blue-600"></div>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Cloud className="w-8 h-8 text-blue-600 animate-pulse" />
+                </div>
+              </div>
+              <div>
+                <p className="text-lg font-semibold text-gray-900">正在解析文件...</p>
+                <p className="text-sm text-gray-500 mt-1">请稍候</p>
+              </div>
             </div>
           ) : (
-            <div className="space-y-4">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
+            <div className="space-y-6">
+              <div className={`
+                w-20 h-20 mx-auto rounded-2xl flex items-center justify-center
+                transition-all duration-300
+                ${isDragActive 
+                  ? 'bg-gradient-to-br from-blue-500 to-indigo-600 shadow-xl shadow-blue-500/30 scale-110' 
+                  : 'bg-gradient-to-br from-blue-100 to-indigo-100'
+                }
+              `}>
                 {isDragActive ? (
-                  <Upload className="w-8 h-8 text-blue-600" />
+                  <FileCheck className="w-10 h-10 text-white" />
                 ) : (
-                  <FileSpreadsheet className="w-8 h-8 text-blue-600" />
+                  <FileSpreadsheet className="w-10 h-10 text-blue-600" />
                 )}
               </div>
               
               <div>
-                <p className="text-lg font-medium text-gray-900 mb-1">
+                <p className="text-xl font-semibold text-gray-900 mb-2">
                   {isDragActive ? '释放文件以上传' : '点击或拖拽上传 Excel 文件'}
                 </p>
-                <p className="text-sm text-gray-500">
-                  支持 .xlsx 和 .xls 格式
+                <p className="text-gray-500">
+                  支持 <span className="font-medium text-blue-600">.xlsx</span> 和 <span className="font-medium text-blue-600">.xls</span> 格式
                 </p>
+              </div>
+              
+              <div className="flex items-center justify-center gap-2 text-sm text-gray-400">
+                <Upload className="w-4 h-4" />
+                <span>拖拽文件到此处或点击选择</span>
               </div>
             </div>
           )}
         </label>
       </div>
 
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h4 className="font-medium text-blue-900 mb-2">文件格式要求：</h4>
-        <ul className="text-sm text-blue-700 space-y-1 list-disc list-inside">
-          <li>第一行为表头（列标题）</li>
-          <li>从第二行开始为数据</li>
-          <li>支持常见考勤字段：姓名、日期、上班时间、下班时间、状态等</li>
-        </ul>
+      <div className="card p-5 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-100">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+            <FileSpreadsheet className="w-5 h-5 text-blue-600" />
+          </div>
+          <div>
+            <h4 className="font-semibold text-blue-900 mb-2">文件格式要求</h4>
+            <ul className="text-sm text-blue-700 space-y-1.5">
+              <li className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 bg-blue-400 rounded-full"></span>
+                第一行为表头（列标题）
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 bg-blue-400 rounded-full"></span>
+                从第二行开始为数据
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 bg-blue-400 rounded-full"></span>
+                支持常见考勤字段：姓名、日期、上班时间、下班时间、状态等
+              </li>
+            </ul>
+          </div>
+        </div>
       </div>
     </div>
   )

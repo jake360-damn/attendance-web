@@ -11,7 +11,11 @@ import {
   Trash2, 
   FileSpreadsheet,
   Loader2,
-  Search
+  Search,
+  Table,
+  Check,
+  X as XIcon,
+  Edit3
 } from 'lucide-react'
 
 interface ExcelEditorProps {
@@ -129,7 +133,6 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
         throw new Error('创建用户资料失败，无法保存文件: ' + profileError.message)
       }
 
-      // 保存文件信息
       const { data: fileData, error: fileError } = await supabase
         .from('excel_files')
         .insert({
@@ -153,7 +156,6 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
 
       const fileId = (fileData as any).id
 
-      // 保存原始格式数据
       const { error: rawDataError } = await supabase
         .from('excel_data_raw')
         .insert({
@@ -167,7 +169,6 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
         throw new Error('原始数据保存失败: ' + rawDataError.message)
       }
 
-      // 记录编辑历史
       await supabase
         .from('edit_history')
         .insert({
@@ -178,6 +179,7 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
         })
 
       alert('保存成功！')
+      onBack()
     } catch (error: any) {
       console.error('保存失败:', error)
       alert('保存失败: ' + error.message)
@@ -202,33 +204,41 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
   }
 
   return (
-    <div className="space-y-4">
-      <div className="bg-white rounded-lg shadow p-4 space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
+    <div className="space-y-4 animate-fade-in">
+      <div className="card p-5">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+          <div className="flex items-center gap-3">
             <button
               onClick={onBack}
-              className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              className="btn btn-ghost"
             >
               <ArrowLeft className="w-4 h-4" />
               返回
             </button>
-            <div className="h-6 w-px bg-gray-300" />
-            <div className="flex items-center gap-2">
-              <FileSpreadsheet className="w-5 h-5 text-green-600" />
-              <input
-                type="text"
-                value={fileName}
-                onChange={(e) => setFileName(e.target.value)}
-                className="font-medium text-gray-900 border-none focus:ring-0 p-0 bg-transparent"
-              />
+            <div className="divider"></div>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                <FileSpreadsheet className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <input
+                  type="text"
+                  value={fileName}
+                  onChange={(e) => setFileName(e.target.value)}
+                  className="font-semibold text-gray-900 border-none focus:ring-0 p-0 bg-transparent text-lg"
+                />
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <Table className="w-3.5 h-3.5" />
+                  <span>{rows.length} 行数据</span>
+                </div>
+              </div>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={addRow}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="btn btn-primary"
             >
               <Plus className="w-4 h-4" />
               添加行
@@ -236,7 +246,7 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
             {selectedRows.size > 0 && (
               <button
                 onClick={deleteSelectedRows}
-                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                className="btn btn-danger"
               >
                 <Trash2 className="w-4 h-4" />
                 删除选中 ({selectedRows.size})
@@ -244,7 +254,7 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
             )}
             <button
               onClick={exportExcel}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              className="btn btn-success"
             >
               <Download className="w-4 h-4" />
               导出
@@ -252,7 +262,7 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
             <button
               onClick={saveToDatabase}
               disabled={saving}
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+              className="btn bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700 shadow-lg shadow-indigo-500/25"
             >
               {saving ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -264,15 +274,15 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
-              placeholder="搜索..."
+              placeholder="搜索数据..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="input input-icon"
             />
           </div>
           <div className="text-sm text-gray-500">
@@ -282,69 +292,80 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="table-container">
         <div className="overflow-x-auto max-h-[600px]">
           <table className="w-full">
-            <thead className="bg-gray-50 sticky top-0">
+            <thead className="table-header sticky top-0 z-10">
               <tr>
-                <th className="px-4 py-3 text-left">
+                <th className="table-cell w-12">
                   <input
                     type="checkbox"
                     checked={selectedRows.size === filteredRows.length && filteredRows.length > 0}
                     onChange={toggleSelectAll}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  序号
+                <th className="table-cell font-semibold text-gray-600 w-16">
+                  #
                 </th>
                 {headers.map((header, index) => (
                   <th
                     key={index}
-                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    className="table-cell font-semibold text-gray-600"
                   >
                     {header}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody>
               {filteredRows.map((row, rowIndex) => (
-                <tr
-                  key={rowIndex}
-                  className={`hover:bg-gray-50 ${
-                    selectedRows.has(rowIndex) ? 'bg-blue-50' : ''
-                  }`}
+                <tr 
+                  key={rowIndex} 
+                  className={`table-row ${selectedRows.has(rowIndex) ? 'bg-blue-50' : ''}`}
                 >
-                  <td className="px-4 py-3">
+                  <td className="table-cell">
                     <input
                       type="checkbox"
                       checked={selectedRows.has(rowIndex)}
                       onChange={() => toggleRowSelection(rowIndex)}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-500">
+                  <td className="table-cell text-gray-400 font-medium">
                     {rowIndex + 1}
                   </td>
                   {row.map((cell, colIndex) => (
                     <td
                       key={colIndex}
-                      className="px-4 py-3 text-sm text-gray-900"
+                      className="table-cell"
                       onClick={() => startEdit(rowIndex, colIndex, cell)}
                     >
                       {editingCell?.row === rowIndex && editingCell?.col === colIndex ? (
-                        <input
-                          type="text"
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          onBlur={saveEdit}
-                          onKeyDown={handleKeyDown}
-                          autoFocus
-                          className="w-full px-2 py-1 border border-blue-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="text"
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            autoFocus
+                            className="w-full px-2 py-1 border border-blue-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-sm"
+                          />
+                          <button
+                            onClick={(e) => { e.stopPropagation(); saveEdit(); }}
+                            className="p-1 text-green-600 hover:bg-green-50 rounded"
+                          >
+                            <Check className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); cancelEdit(); }}
+                            className="p-1 text-red-600 hover:bg-red-50 rounded"
+                          >
+                            <XIcon className="w-4 h-4" />
+                          </button>
+                        </div>
                       ) : (
-                        <span className="cursor-pointer hover:bg-yellow-100 px-2 py-1 rounded -mx-2">
+                        <span className="inline-block px-2 py-1 rounded cursor-pointer hover:bg-amber-50 hover:text-amber-700 transition-colors">
                           {(cell !== null && cell !== undefined && cell !== '') ? cell : '-'}
                         </span>
                       )}
@@ -356,18 +377,29 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
           </table>
         </div>
         {filteredRows.length === 0 && (
-          <div className="text-center py-12 text-gray-500">
-            {searchTerm ? '没有找到匹配的数据' : '暂无数据'}
+          <div className="empty-state py-12">
+            <Table className="w-12 h-12 text-gray-300 mb-4" />
+            <p className="text-gray-500">
+              {searchTerm ? '没有找到匹配的数据' : '暂无数据，点击"添加行"开始'}
+            </p>
           </div>
         )}
       </div>
 
-      <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-600">
-        <p className="font-medium mb-2">快捷键：</p>
-        <div className="flex flex-wrap gap-4">
-          <span>Enter - 保存编辑</span>
-          <span>Escape - 取消编辑</span>
-          <span>点击单元格 - 编辑</span>
+      <div className="card p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-100">
+        <div className="flex items-start gap-3">
+          <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+            <Edit3 className="w-4 h-4 text-blue-600" />
+          </div>
+          <div>
+            <p className="font-medium text-blue-900 mb-1">快捷键</p>
+            <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-blue-700">
+              <span>Enter - 保存编辑</span>
+              <span>Escape - 取消编辑</span>
+              <span>点击单元格 - 编辑</span>
+              <span>复选框 - 批量删除</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>

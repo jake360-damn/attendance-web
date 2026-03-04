@@ -13,7 +13,11 @@ import {
   Clock,
   FileSpreadsheet,
   Search,
-  Info
+  Info,
+  Table,
+  Edit3,
+  Check,
+  X as XIcon
 } from 'lucide-react'
 
 interface FileViewerProps {
@@ -38,6 +42,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
   const isAdmin = currentUser?.role === 'admin'
   const isOwner = file.uploader_name === currentUser?.full_name || 
                   file.uploader_email === currentUser?.email
+  const canEdit = isShared || isOwner
 
   useEffect(() => {
     setSupabase(createBrowserClient())
@@ -53,7 +58,6 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
     
     setLoading(true)
     try {
-      // 首先尝试从 excel_data_raw 表获取原始格式数据
       const { data: rawData, error: rawError } = await supabase
         .from('excel_data_raw')
         .select('*')
@@ -61,12 +65,10 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
         .single()
 
       if (rawData && !rawError) {
-        // 使用原始格式数据
         setHeaders(rawData.headers || [])
         setRows(rawData.rows || [])
         setRawDataId(rawData.id)
       } else {
-        // 如果没有原始数据，尝试从 attendance_records 获取（兼容旧数据）
         const { data: records, error: recordsError } = await supabase
           .from('attendance_records')
           .select('*')
@@ -108,7 +110,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
   )
 
   const startEdit = (rowIndex: number, colIndex: number, value: any) => {
-    if (!isShared && !isOwner) return
+    if (!canEdit) return
     setEditingCell({ row: rowIndex, col: colIndex })
     setEditValue(String(value || ''))
   }
@@ -131,7 +133,6 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
     setEditingCell(null)
     setEditValue('')
 
-    // 更新数据库中的原始数据
     if (rawDataId) {
       try {
         await supabase
@@ -139,7 +140,6 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
           .update({ rows: newRows })
           .eq('id', rawDataId)
 
-        // 记录修改历史
         await supabase
           .from('edit_history')
           .insert({
@@ -159,12 +159,16 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
     }
   }
 
+  const cancelEdit = () => {
+    setEditingCell(null)
+    setEditValue('')
+  }
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       saveEdit()
     } else if (e.key === 'Escape') {
-      setEditingCell(null)
-      setEditValue('')
+      cancelEdit()
     }
   }
 
@@ -201,42 +205,55 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="card p-12">
+        <div className="flex flex-col items-center justify-center gap-4">
+          <div className="relative">
+            <div className="w-12 h-12 border-3 border-blue-200 rounded-full animate-spin border-t-blue-600"></div>
+          </div>
+          <p className="text-gray-500 font-medium">加载数据...</p>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-4">
-      <div className="bg-white rounded-lg shadow p-4 space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
+    <div className="space-y-4 animate-fade-in">
+      <div className="card p-5">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+          <div className="flex items-center gap-3">
             <button
               onClick={onBack}
-              className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              className="btn btn-ghost"
             >
               <ArrowLeft className="w-4 h-4" />
               返回
             </button>
-            <div className="h-6 w-px bg-gray-300" />
-            <div className="flex items-center gap-2">
-              <FileSpreadsheet className="w-5 h-5 text-green-600" />
-              <span className="font-medium text-gray-900">{file.file_name}</span>
+            <div className="divider"></div>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                <FileSpreadsheet className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h2 className="font-semibold text-gray-900">{file.file_name}</h2>
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <Table className="w-3.5 h-3.5" />
+                  <span>{rows.length} 行数据</span>
+                </div>
+              </div>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={onViewHistory}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+              className="btn btn-secondary"
             >
               <Clock className="w-4 h-4" />
               修改历史
             </button>
             <button
               onClick={exportExcel}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              className="btn btn-success"
             >
               <Download className="w-4 h-4" />
               导出
@@ -245,11 +262,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
               <button
                 onClick={toggleShare}
                 disabled={saving}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                  isShared 
-                    ? 'bg-orange-600 hover:bg-orange-700 text-white' 
-                    : 'bg-blue-600 hover:bg-blue-700 text-white'
-                }`}
+                className={isShared ? "btn btn-warning" : "btn btn-primary"}
               >
                 {saving ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -264,29 +277,28 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
-              placeholder="搜索..."
+              placeholder="搜索数据..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="input input-icon"
             />
           </div>
-          <div className="text-sm text-gray-500">
-            共 {rows.length} 行数据
-            {searchTerm && ` (显示 ${filteredRows.length} 行)`}
-          </div>
-          <div className="text-sm">
+          <div className="flex items-center gap-3">
+            <div className="text-sm text-gray-500">
+              {searchTerm && `显示 ${filteredRows.length} / ${rows.length} 行`}
+            </div>
             {isShared ? (
-              <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full">
+              <span className="badge badge-success">
                 <Share2 className="w-3 h-3" />
                 已共享
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-600 rounded-full">
+              <span className="badge badge-muted">
                 <Lock className="w-3 h-3" />
                 私有
               </span>
@@ -296,49 +308,64 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
       </div>
 
       {headers.length > 0 ? (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="table-container">
           <div className="overflow-x-auto max-h-[600px]">
             <table className="w-full">
-              <thead className="bg-gray-50 sticky top-0">
+              <thead className="table-header sticky top-0 z-10">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    序号
+                  <th className="table-cell font-semibold text-gray-600 w-16">
+                    #
                   </th>
                   {headers.map((header, index) => (
                     <th
                       key={index}
-                      className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      className="table-cell font-semibold text-gray-600"
                     >
                       {header}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody>
                 {filteredRows.map((row, rowIndex) => (
-                  <tr key={rowIndex} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm text-gray-500">
+                  <tr key={rowIndex} className="table-row">
+                    <td className="table-cell text-gray-400 font-medium">
                       {rowIndex + 1}
                     </td>
                     {row.map((cell, colIndex) => (
                       <td
                         key={colIndex}
-                        className="px-4 py-3 text-sm text-gray-900"
+                        className="table-cell"
                         onClick={() => startEdit(rowIndex, colIndex, cell)}
                       >
                         {editingCell?.row === rowIndex && editingCell?.col === colIndex ? (
-                          <input
-                            type="text"
-                            value={editValue}
-                            onChange={(e) => setEditValue(e.target.value)}
-                            onBlur={saveEdit}
-                            onKeyDown={handleKeyDown}
-                            autoFocus
-                            className="w-full px-2 py-1 border border-blue-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="text"
+                              value={editValue}
+                              onChange={(e) => setEditValue(e.target.value)}
+                              onKeyDown={handleKeyDown}
+                              autoFocus
+                              className="w-full px-2 py-1 border border-blue-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-sm"
+                            />
+                            <button
+                              onClick={(e) => { e.stopPropagation(); saveEdit(); }}
+                              className="p-1 text-green-600 hover:bg-green-50 rounded"
+                            >
+                              <Check className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); cancelEdit(); }}
+                              className="p-1 text-red-600 hover:bg-red-50 rounded"
+                            >
+                              <XIcon className="w-4 h-4" />
+                            </button>
+                          </div>
                         ) : (
-                          <span className={`cursor-pointer hover:bg-yellow-100 px-2 py-1 rounded -mx-2 ${
-                            (isShared || isOwner) ? '' : 'cursor-default hover:bg-transparent'
+                          <span className={`inline-block px-2 py-1 rounded transition-colors ${
+                            canEdit 
+                              ? 'cursor-pointer hover:bg-amber-50 hover:text-amber-700' 
+                              : 'cursor-default'
                           }`}>
                             {(cell !== null && cell !== undefined && cell !== '') ? cell : '-'}
                           </span>
@@ -351,25 +378,36 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
             </table>
           </div>
           {filteredRows.length === 0 && (
-            <div className="text-center py-12 text-gray-500">
-              {searchTerm ? '没有找到匹配的数据' : '暂无数据'}
+            <div className="empty-state py-12">
+              <Search className="w-12 h-12 text-gray-300 mb-4" />
+              <p className="text-gray-500">没有找到匹配的数据</p>
             </div>
           )}
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow p-12 text-center">
-          <Info className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-500">暂无数据</p>
+        <div className="card p-16">
+          <div className="empty-state">
+            <Info className="w-16 h-16 text-gray-300 mb-4" />
+            <p className="text-lg font-medium text-gray-900 mb-1">暂无数据</p>
+            <p className="text-gray-500">该文件没有任何数据</p>
+          </div>
         </div>
       )}
 
-      <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-600">
-        <p className="font-medium mb-2">操作说明：</p>
-        <div className="flex flex-wrap gap-4">
-          <span>点击单元格 - 编辑内容</span>
-          <span>Enter - 保存编辑</span>
-          <span>Escape - 取消编辑</span>
-          {isAdmin && <span className="text-blue-600">管理员可以控制文件共享状态</span>}
+      <div className="card p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-100">
+        <div className="flex items-start gap-3">
+          <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+            <Edit3 className="w-4 h-4 text-blue-600" />
+          </div>
+          <div>
+            <p className="font-medium text-blue-900 mb-1">操作说明</p>
+            <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-blue-700">
+              <span>点击单元格 - 编辑内容</span>
+              <span>Enter - 保存编辑</span>
+              <span>Escape - 取消编辑</span>
+              {isAdmin && <span className="text-purple-600 font-medium">管理员可控制文件共享状态</span>}
+            </div>
+          </div>
         </div>
       </div>
     </div>

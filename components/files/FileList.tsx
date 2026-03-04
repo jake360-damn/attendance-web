@@ -12,7 +12,12 @@ import {
   Share2,
   Eye,
   Trash2,
-  RefreshCw
+  RefreshCw,
+  FileText,
+  HardDrive,
+  Table,
+  Calendar,
+  Lock
 } from 'lucide-react'
 
 interface FileListProps {
@@ -120,7 +125,6 @@ export default function FileList({ currentUser, onSelectFile, onViewHistory }: F
           description: `删除了文件 "${fileName}"`,
         })
 
-      // 删除原始数据
       const { error: rawDataError } = await supabase
         .from('excel_data_raw')
         .delete()
@@ -130,7 +134,6 @@ export default function FileList({ currentUser, onSelectFile, onViewHistory }: F
         console.error('删除原始数据失败:', rawDataError)
       }
 
-      // 删除考勤记录（兼容旧数据）
       const { error: recordsError } = await supabase
         .from('attendance_records')
         .delete()
@@ -196,21 +199,26 @@ export default function FileList({ currentUser, onSelectFile, onViewHistory }: F
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="card p-12">
+        <div className="flex flex-col items-center justify-center gap-4">
+          <div className="relative">
+            <div className="w-12 h-12 border-3 border-blue-200 rounded-full animate-spin border-t-blue-600"></div>
+          </div>
+          <p className="text-gray-500 font-medium">加载文件列表...</p>
+        </div>
       </div>
     )
   }
 
   return (
     <div className="space-y-4">
-      <div className="bg-white rounded-lg shadow p-4">
+      <div className="card p-5">
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
             <select
               value={searchType}
               onChange={(e) => setSearchType(e.target.value as 'fileName' | 'uploader')}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="input py-2 w-32"
             >
               <option value="fileName">按文件名</option>
               <option value="uploader">按上传者</option>
@@ -224,130 +232,119 @@ export default function FileList({ currentUser, onSelectFile, onViewHistory }: F
               placeholder={searchType === 'fileName' ? '搜索文件名...' : '搜索上传者名称...'}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="input input-icon"
             />
           </div>
           
           <button
             onClick={fetchFiles}
-            className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="btn btn-ghost"
             title="刷新列表"
           >
             <RefreshCw className="w-4 h-4" />
             刷新
           </button>
           
-          <div className="text-sm text-gray-500">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-sm font-medium">
+            <FileText className="w-4 h-4" />
             共 {filteredFiles.length} 个文件
           </div>
         </div>
       </div>
 
       {filteredFiles.length === 0 ? (
-        <div className="bg-white rounded-lg shadow p-12 text-center">
-          <FileSpreadsheet className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-500">
-            {searchTerm ? '没有找到匹配的文件' : '暂无文件'}
-          </p>
+        <div className="card p-16">
+          <div className="empty-state">
+            <div className="w-20 h-20 bg-gray-100 rounded-2xl flex items-center justify-center mb-4">
+              <FileSpreadsheet className="w-10 h-10 text-gray-300" />
+            </div>
+            <p className="text-lg font-medium text-gray-900 mb-1">
+              {searchTerm ? '没有找到匹配的文件' : '暂无文件'}
+            </p>
+            <p className="text-gray-500">
+              {searchTerm ? '尝试其他搜索条件' : '点击上方按钮上传您的第一个文件'}
+            </p>
+          </div>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  文件名
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  上传者
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  大小
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  行数
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  上传时间
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  状态
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  操作
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {filteredFiles.map((file) => (
-                <tr key={file.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <FileSpreadsheet className="w-5 h-5 text-green-600" />
-                      <span className="font-medium text-gray-900">{file.file_name}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <UserIcon className="w-4 h-4" />
-                      <span>{file.uploader_name}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">
-                    {formatFileSize(file.file_size)}
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">
-                    {file.row_count} 行
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">
-                    <div className="flex items-center gap-1">
-                      <Clock className="w-4 h-4" />
-                      {formatDate(file.created_at)}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    {file.is_shared ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">
-                        <Share2 className="w-3 h-3" />
-                        已共享
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">
-                        私有
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => onSelectFile(file)}
-                        className="flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                      >
-                        <Eye className="w-4 h-4" />
-                        查看
-                      </button>
-                      <button
-                        onClick={() => onViewHistory(file.id)}
-                        className="flex items-center gap-1 px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-                      >
-                        <Clock className="w-4 h-4" />
-                        历史
-                      </button>
-                      {canDelete(file) && (
-                        <button
-                          onClick={() => handleDeleteClick(file)}
-                          className="flex items-center gap-1 px-3 py-1.5 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          删除
-                        </button>
+        <div className="grid gap-3">
+          {filteredFiles.map((file, index) => (
+            <div 
+              key={file.id} 
+              className="card card-hover p-5 animate-fade-in"
+              style={{ animationDelay: `${index * 50}ms` }}
+            >
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20 flex-shrink-0">
+                    <FileSpreadsheet className="w-6 h-6 text-white" />
+                  </div>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-semibold text-gray-900 truncate">{file.file_name}</h3>
+                      {file.is_shared ? (
+                        <span className="badge badge-success flex-shrink-0">
+                          <Share2 className="w-3 h-3" />
+                          已共享
+                        </span>
+                      ) : (
+                        <span className="badge badge-muted flex-shrink-0">
+                          <Lock className="w-3 h-3" />
+                          私有
+                        </span>
                       )}
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    
+                    <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
+                      <div className="flex items-center gap-1.5">
+                        <UserIcon className="w-4 h-4" />
+                        <span>{file.uploader_name}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <HardDrive className="w-4 h-4" />
+                        <span>{formatFileSize(file.file_size)}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Table className="w-4 h-4" />
+                        <span>{file.row_count} 行</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Calendar className="w-4 h-4" />
+                        <span>{formatDate(file.created_at)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <button
+                    onClick={() => onSelectFile(file)}
+                    className="btn btn-primary btn-sm"
+                  >
+                    <Eye className="w-4 h-4" />
+                    查看
+                  </button>
+                  <button
+                    onClick={() => onViewHistory(file.id)}
+                    className="btn btn-secondary btn-sm"
+                  >
+                    <Clock className="w-4 h-4" />
+                    历史
+                  </button>
+                  {canDelete(file) && (
+                    <button
+                      onClick={() => handleDeleteClick(file)}
+                      className="btn btn-sm bg-red-50 text-red-600 hover:bg-red-100 border border-red-200"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      删除
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
