@@ -13,7 +13,8 @@ import {
   Loader2,
   Clock,
   FileSpreadsheet,
-  Search
+  Search,
+  Info
 } from 'lucide-react'
 
 interface FileViewerProps {
@@ -25,6 +26,7 @@ interface FileViewerProps {
 
 export default function FileViewer({ file, currentUser, onBack, onViewHistory }: FileViewerProps) {
   const [headers, setHeaders] = useState<string[]>([])
+  const [originalHeaders, setOriginalHeaders] = useState<string[]>([])
   const [rows, setRows] = useState<any[][]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -33,6 +35,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
   const [searchTerm, setSearchTerm] = useState('')
   const [supabase, setSupabase] = useState<any>(null)
   const [isShared, setIsShared] = useState(file.is_shared)
+  const [showOriginalHeaders, setShowOriginalHeaders] = useState(false)
 
   const isAdmin = currentUser?.role === 'admin'
   const isOwner = file.uploader_name === currentUser?.full_name || 
@@ -52,6 +55,16 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
     
     setLoading(true)
     try {
+      const { data: fileData, error: fileError } = await supabase
+        .from('excel_files')
+        .select('original_headers')
+        .eq('id', file.id)
+        .single()
+
+      if (fileData?.original_headers) {
+        setOriginalHeaders(fileData.original_headers)
+      }
+
       const { data, error } = await supabase
         .from('attendance_records')
         .select('*')
@@ -188,6 +201,30 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
 
   return (
     <div className="space-y-4">
+      {originalHeaders.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-medium text-blue-800">原始文件标题</h3>
+                  <p className="text-sm text-blue-700 mt-1">
+                    {originalHeaders.join(' | ')}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowOriginalHeaders(!showOriginalHeaders)}
+                  className="text-sm text-blue-600 hover:text-blue-800"
+                >
+                  {showOriginalHeaders ? '隐藏' : '显示'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white rounded-lg shadow p-4 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-2">

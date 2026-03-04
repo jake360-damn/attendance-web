@@ -12,7 +12,9 @@ import {
   FileSpreadsheet,
   Loader2,
   Search,
-  Filter
+  AlertCircle,
+  CheckCircle,
+  Info
 } from 'lucide-react'
 
 interface ExcelEditorProps {
@@ -26,8 +28,54 @@ interface ExcelEditorProps {
   userId: string
 }
 
+const STANDARD_HEADERS = ['姓名', '日期', '上班时间', '下班时间', '状态', '备注']
+
+const HEADER_MAPPINGS: Record<string, string[]> = {
+  '姓名': ['name', '姓名', '员工姓名', '员工', '名字', '职员姓名', 'name', 'employee_name'],
+  '日期': ['date', '日期', '考勤日期', '打卡日期', '时间', 'date', 'attendance_date'],
+  '上班时间': ['check_in', '上班时间', '上班', '签到时间', '打卡时间', '上班打卡', 'check_in', 'in_time'],
+  '下班时间': ['check_out', '下班时间', '下班', '签退时间', '下班打卡', 'check_out', 'out_time'],
+  '状态': ['status', '状态', '考勤状态', '出勤状态', 'attendance_status'],
+  '备注': ['notes', '备注', '说明', 'remark', 'note', 'comments']
+}
+
+function matchHeaderToStandard(header: string): { standard: string | null, confidence: number } {
+  const headerLower = header.toLowerCase().replace(/\s+/g, '_')
+  
+  for (const [standard, patterns] of Object.entries(HEADER_MAPPINGS)) {
+    if (patterns.some(p => headerLower.includes(p.toLowerCase()) || p.toLowerCase().includes(headerLower))) {
+      return { standard, confidence: 1 }
+    }
+  }
+  
+  return { standard: null, confidence: 0 }
+}
+
+function generateColumnMapping(headers: string[]): { 
+  mapping: Map<string, string>, 
+  unmatched: string[], 
+  suggestions: Map<string, string[]> 
+} {
+  const mapping = new Map<string, string>()
+  const unmatched: string[] = []
+  const suggestions = new Map<string, string[]>()
+
+  headers.forEach(header => {
+    const result = matchHeaderToStandard(header)
+    if (result.standard) {
+      mapping.set(header, result.standard)
+    } else {
+      unmatched.push(header)
+      suggestions.set(header, STANDARD_HEADERS.filter(h => !Array.from(mapping.values()).includes(h)))
+    }
+  })
+
+  return { mapping, unmatched, suggestions }
+}
+
 export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) {
   const [headers, setHeaders] = useState<string[]>(data.headers)
+  const [originalHeaders, setOriginalHeaders] = useState<string[]>(data.headers)
   const [rows, setRows] = useState<any[][]>(data.rows)
   const [editingCell, setEditingCell] = useState<{row: number, col: number} | null>(null)
   const [editValue, setEditValue] = useState('')
@@ -37,9 +85,23 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
   const [fileName, setFileName] = useState(data.fileName)
   const [supabase, setSupabase] = useState<any>(null)
   const [savedFileId, setSavedFileId] = useState<string | null>(null)
+  const [showMappingModal, setShowMappingModal] = useState(false)
+  const [columnMapping, setColumnMapping] = useState<Map<string, string>>(new Map())
+  const [unmatchedHeaders, setUnmatchedHeaders] = useState<string[]>([])
+  const [headerSuggestions, setHeaderSuggestions] = useState<Map<string, string[]>>(new Map())
+  const [useOriginalHeaders, setUseOriginalHeaders] = useState(true)
 
   useEffect(() => {
     setSupabase(createBrowserClient())
+    
+    const { mapping, unmatched, suggestions } = generateColumnMapping(data.headers)
+    setColumnMapping(mapping)
+    setUnmatchedHeaders(unmatched)
+    setHeaderSuggestions(suggestions)
+    
+    if (unmatched.length > 0) {
+      setShowMappingModal(true)
+    }
   }, [])
 
   const filteredRows = rows.filter(row => 
@@ -97,6 +159,32 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
     }
   }
 
+  const handleHeaderMappingChange = (originalHeader: string, newMapping: string) => {
+    const newMappingMap = new Map(columnMapping)
+    newMappingMap.set(originalHeader, newMapping)
+    setColumnMapping(newMappingMap)
+    
+    const newUnmatched = unmatchedHeaders.filter(h => h !== originalHeader)
+    setUnmatchedHeaders(newUnmatched)
+  }
+
+  const applyHeaderMapping = () => {
+    if (useOriginalHeaders) {
+      setShowMappingModal(false)
+      return
+    }
+
+    const newHeaders = headers.map(h => columnMapping.get(h) || h)
+    setHeaders(newHeaders)
+    setShowMappingModal(false)
+  }
+
+  const keepOriginalHeaders = () => {
+    setUseOriginalHeaders(true)
+    setHeaders(originalHeaders)
+    setShowMappingModal(false)
+  }
+
   const saveToDatabase = async () => {
     if (!supabase) {
       alert('Supabase 客户端未初始化')
@@ -115,7 +203,6 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
         throw new Error('获取用户信息失败，请重新登录')
       }
 
-      console.log('创建/更新用户资料...')
       const { error: profileError } = await supabase
         .from('profiles')
         .upsert({
@@ -131,8 +218,6 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
         console.error('创建用户资料失败:', profileError)
         throw new Error('创建用户资料失败，无法保存文件: ' + profileError.message)
       }
-      
-      console.log('用户资料创建/更新成功')
 
       const { data: fileData, error: fileError } = await supabase
         .from('excel_files')
@@ -141,6 +226,7 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
           file_name: fileName,
           file_size: data.fileSize,
           row_count: rows.length,
+          original_headers: originalHeaders,
         } as any)
         .select()
         .single()
@@ -162,6 +248,7 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
           user_id: userId,
           file_id: fileId,
         }
+        
         headers.forEach((header, index) => {
           const key = header.toLowerCase().replace(/\s+/g, '_')
           if (key.includes('name') || key.includes('姓名')) {
@@ -196,7 +283,7 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
           file_id: fileId,
           user_id: userId,
           action: 'create',
-          description: `上传并创建了文件 "${fileName}"，包含 ${rows.length} 条记录`,
+          description: `上传并创建了文件 "${fileName}"，包含 ${rows.length} 条记录，原始标题: ${originalHeaders.join(', ')}`,
         })
 
       alert('保存成功！')
@@ -225,6 +312,54 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
 
   return (
     <div className="space-y-4">
+      {showMappingModal && unmatchedHeaders.length > 0 && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="font-medium text-yellow-800 mb-2">检测到不匹配的列标题</h3>
+              <p className="text-sm text-yellow-700 mb-3">
+                以下列标题与标准格式不匹配，请选择如何处理：
+              </p>
+              
+              <div className="space-y-2 mb-4">
+                {unmatchedHeaders.map(header => (
+                  <div key={header} className="flex items-center gap-3 bg-white p-2 rounded border">
+                    <span className="font-medium text-gray-700 min-w-[100px]">{header}</span>
+                    <span className="text-gray-400">→</span>
+                    <select
+                      value={columnMapping.get(header) || ''}
+                      onChange={(e) => handleHeaderMappingChange(header, e.target.value)}
+                      className="flex-1 px-3 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">保留原始标题</option>
+                      {STANDARD_HEADERS.map(h => (
+                        <option key={h} value={h}>{h}</option>
+                      ))}
+                    </select>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={applyHeaderMapping}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  应用映射
+                </button>
+                <button
+                  onClick={keepOriginalHeaders}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  保留原始标题
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white rounded-lg shadow p-4 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-2">
@@ -301,6 +436,12 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
             共 {rows.length} 行数据
             {searchTerm && ` (显示 ${filteredRows.length} 行)`}
           </div>
+          {!useOriginalHeaders && (
+            <div className="flex items-center gap-1 text-sm text-blue-600">
+              <Info className="w-4 h-4" />
+              已应用标题映射
+            </div>
+          )}
         </div>
       </div>
 
@@ -320,14 +461,24 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   序号
                 </th>
-                {headers.map((header, index) => (
-                  <th
-                    key={index}
-                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
-                    {header}
-                  </th>
-                ))}
+                {headers.map((header, index) => {
+                  const isMapped = columnMapping.get(originalHeaders[index]) && columnMapping.get(originalHeaders[index]) !== originalHeaders[index]
+                  return (
+                    <th
+                      key={index}
+                      className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      <div className="flex items-center gap-1">
+                        {header}
+                        {isMapped && (
+                          <span className="text-blue-500 text-[10px]" title={`原始: ${originalHeaders[index]}`}>
+                            *
+                          </span>
+                        )}
+                      </div>
+                    </th>
+                  )
+                })}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">

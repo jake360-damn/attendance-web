@@ -3,13 +3,16 @@
 import { useState, useEffect } from 'react'
 import { createBrowserClient } from '@/lib/supabase'
 import { SharedFile, User } from '@/types'
+import DeleteConfirmModal from './DeleteConfirmModal'
 import { 
   FileSpreadsheet, 
   Search, 
   Clock, 
   User as UserIcon,
   Share2,
-  Eye
+  Eye,
+  Trash2,
+  RefreshCw
 } from 'lucide-react'
 
 interface FileListProps {
@@ -24,6 +27,17 @@ export default function FileList({ currentUser, onSelectFile, onViewHistory }: F
   const [searchTerm, setSearchTerm] = useState('')
   const [searchType, setSearchType] = useState<'fileName' | 'uploader'>('fileName')
   const [supabase, setSupabase] = useState<any>(null)
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean
+    file: SharedFile | null
+    isDeleting: boolean
+  }>({
+    isOpen: false,
+    file: null,
+    isDeleting: false
+  })
+
+  const isAdmin = currentUser?.role === 'admin'
 
   useEffect(() => {
     setSupabase(createBrowserClient())
@@ -78,6 +92,68 @@ export default function FileList({ currentUser, onSelectFile, onViewHistory }: F
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleDeleteClick = (file: SharedFile) => {
+    setDeleteModal({
+      isOpen: true,
+      file,
+      isDeleting: false
+    })
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!supabase || !deleteModal.file || !currentUser) return
+
+    setDeleteModal(prev => ({ ...prev, isDeleting: true }))
+
+    try {
+      const fileId = deleteModal.file.id
+      const fileName = deleteModal.file.file_name
+
+      await supabase
+        .from('edit_history')
+        .insert({
+          file_id: fileId,
+          user_id: currentUser.id,
+          action: 'delete',
+          description: `删除了文件 "${fileName}"`,
+        })
+
+      const { error: recordsError } = await supabase
+        .from('attendance_records')
+        .delete()
+        .eq('file_id', fileId)
+
+      if (recordsError) {
+        console.error('删除考勤记录失败:', recordsError)
+      }
+
+      const { error: fileError } = await supabase
+        .from('excel_files')
+        .delete()
+        .eq('id', fileId)
+
+      if (fileError) throw fileError
+
+      setFiles(prev => prev.filter(f => f.id !== fileId))
+      setDeleteModal({ isOpen: false, file: null, isDeleting: false })
+      alert('文件已删除')
+    } catch (error: any) {
+      console.error('删除文件失败:', error)
+      alert('删除失败: ' + error.message)
+      setDeleteModal(prev => ({ ...prev, isDeleting: false }))
+    }
+  }
+
+  const handleDeleteCancel = () => {
+    setDeleteModal({ isOpen: false, file: null, isDeleting: false })
+  }
+
+  const canDelete = (file: SharedFile) => {
+    if (isAdmin) return true
+    const isOwner = file.uploader_email === currentUser?.email
+    return isOwner && !file.is_shared
   }
 
   const filteredFiles = files.filter(file => {
@@ -140,6 +216,15 @@ export default function FileList({ currentUser, onSelectFile, onViewHistory }: F
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
+          
+          <button
+            onClick={fetchFiles}
+            className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            title="刷新列表"
+          >
+            <RefreshCw className="w-4 h-4" />
+            刷新
+          </button>
           
           <div className="text-sm text-gray-500">
             共 {filteredFiles.length} 个文件
@@ -237,6 +322,15 @@ export default function FileList({ currentUser, onSelectFile, onViewHistory }: F
                         <Clock className="w-4 h-4" />
                         历史
                       </button>
+                      {canDelete(file) && (
+                        <button
+                          onClick={() => handleDeleteClick(file)}
+                          className="flex items-center gap-1 px-3 py-1.5 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          删除
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -245,6 +339,14 @@ export default function FileList({ currentUser, onSelectFile, onViewHistory }: F
           </table>
         </div>
       )}
+
+      <DeleteConfirmModal
+        isOpen={deleteModal.isOpen}
+        fileName={deleteModal.file?.file_name || ''}
+        onConfirm={handleDeleteConfirm}
+        onCancel={handleDeleteCancel}
+        isDeleting={deleteModal.isDeleting}
+      />
     </div>
   )
 }
