@@ -135,7 +135,7 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
       // 如果没有profile记录，创建一个（不指定时间戳，让数据库使用默认值）
       if (!existingProfile) {
         console.log('创建用户资料...')
-        const { error: profileError } = await supabase
+        const { data: newProfile, error: profileError } = await supabase
           .from('profiles')
           .insert({
             id: userId,
@@ -143,16 +143,19 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
             full_name: userData.user.user_metadata?.full_name || '',
             role: 'user',
           } as any)
+          .select()
+          .single()
 
         if (profileError) {
           console.error('创建用户资料失败:', profileError)
-          // 如果是RLS错误或schema cache问题，继续尝试保存文件
-          if (!profileError.message.includes('row-level security') && 
-              !profileError.message.includes('schema cache')) {
-            throw new Error('创建用户资料失败: ' + profileError.message)
-          }
-          console.log('继续尝试保存文件...')
+          throw new Error('创建用户资料失败，无法保存文件: ' + profileError.message)
         }
+        
+        if (!newProfile) {
+          throw new Error('创建用户资料失败，未返回数据')
+        }
+        
+        console.log('用户资料创建成功:', newProfile)
       }
 
       // 保存文件信息
