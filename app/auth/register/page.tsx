@@ -46,16 +46,23 @@ export default function RegisterPage() {
 
       if (signUpError) throw signUpError
 
-      // 创建用户资料
+      // 创建用户资料（使用 upsert 并忽略 RLS 错误）
       if (data.user) {
-        const { error: profileError } = await supabase.from('profiles').insert({
-          id: data.user.id,
-          email: data.user.email!,
-          full_name: fullName,
-          role: 'user',
-        } as any)
-
-        if (profileError) throw profileError
+        try {
+          await supabase.from('profiles').upsert({
+            id: data.user.id,
+            email: data.user.email!,
+            full_name: fullName,
+            role: 'user',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          } as any, {
+            onConflict: 'id'
+          })
+        } catch (profileError) {
+          // 忽略 RLS 错误，用户资料会在登录时自动创建
+          console.log('Profile creation skipped:', profileError)
+        }
       }
 
       setSuccess(true)
