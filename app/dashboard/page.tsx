@@ -13,6 +13,7 @@ export const dynamic = 'force-dynamic'
 
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null)
+  const [userId, setUserId] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [excelData, setExcelData] = useState<any>(null)
   const [supabase, setSupabase] = useState<any>(null)
@@ -36,6 +37,9 @@ export default function DashboardPage() {
           return
         }
 
+        // 保存用户ID（从session获取，确保有值）
+        setUserId(session.user.id)
+
         // 获取用户资料
         const { data: profile } = await supabase
           .from('profiles')
@@ -45,6 +49,16 @@ export default function DashboardPage() {
 
         if (profile) {
           setUser(profile as User)
+        } else {
+          // 如果没有profile，使用session中的用户信息
+          setUser({
+            id: session.user.id,
+            email: session.user.email || '',
+            full_name: session.user.user_metadata?.full_name || '',
+            role: 'user',
+            created_at: session.user.created_at || new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          } as User)
         }
       } catch (error) {
         console.error('Error checking user:', error)
@@ -117,10 +131,10 @@ export default function DashboardPage() {
             <ExcelUploader onUpload={handleExcelUpload} />
           </div>
         ) : (
-          <ExcelEditor 
-            data={excelData} 
+          <ExcelEditor
+            data={excelData}
             onBack={() => setExcelData(null)}
-            userId={user?.id || ''}
+            userId={userId}
           />
         )}
       </main>
