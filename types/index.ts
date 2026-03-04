@@ -28,6 +28,40 @@ export interface ExcelFile {
   row_count: number;
   created_at: string;
   updated_at: string;
+  is_shared?: boolean;
+  shared_by?: string;
+}
+
+export interface EditHistory {
+  id: string;
+  file_id: string;
+  user_id: string;
+  record_id?: string;
+  action: 'create' | 'update' | 'delete';
+  row_index?: number;
+  col_index?: number;
+  field_name?: string;
+  old_value?: string;
+  new_value?: string;
+  description?: string;
+  created_at: string;
+  file_name?: string;
+  user_name?: string;
+  user_email?: string;
+}
+
+export interface SharedFile {
+  id: string;
+  file_name: string;
+  file_size: number;
+  row_count: number;
+  created_at: string;
+  updated_at: string;
+  is_shared: boolean;
+  shared_by?: string;
+  uploader_name?: string;
+  uploader_email?: string;
+  shared_by_name?: string;
 }
 
 export interface ExcelData {

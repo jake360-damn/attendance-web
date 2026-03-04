@@ -107,6 +107,8 @@ export interface Database {
           row_count: number
           created_at: string
           updated_at: string
+          is_shared: boolean
+          shared_by: string | null
         }
         Insert: {
           id?: string
@@ -116,6 +118,8 @@ export interface Database {
           row_count?: number
           created_at?: string
           updated_at?: string
+          is_shared?: boolean
+          shared_by?: string | null
         }
         Update: {
           id?: string
@@ -125,6 +129,8 @@ export interface Database {
           row_count?: number
           created_at?: string
           updated_at?: string
+          is_shared?: boolean
+          shared_by?: string | null
         }
         Relationships: [
           {
@@ -133,12 +139,121 @@ export interface Database {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "excel_files_shared_by_fkey"
+            columns: ["shared_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      edit_history: {
+        Row: {
+          id: string
+          file_id: string
+          user_id: string | null
+          record_id: string | null
+          action: string
+          row_index: number | null
+          col_index: number | null
+          field_name: string | null
+          old_value: string | null
+          new_value: string | null
+          description: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          file_id: string
+          user_id?: string | null
+          record_id?: string | null
+          action: string
+          row_index?: number | null
+          col_index?: number | null
+          field_name?: string | null
+          old_value?: string | null
+          new_value?: string | null
+          description?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          file_id?: string
+          user_id?: string | null
+          record_id?: string | null
+          action?: string
+          row_index?: number | null
+          col_index?: number | null
+          field_name?: string | null
+          old_value?: string | null
+          new_value?: string | null
+          description?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "edit_history_file_id_fkey"
+            columns: ["file_id"]
+            isOneToOne: false
+            referencedRelation: "excel_files"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "edit_history_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "edit_history_record_id_fkey"
+            columns: ["record_id"]
+            isOneToOne: false
+            referencedRelation: "attendance_records"
+            referencedColumns: ["id"]
           }
         ]
       }
     }
     Views: {
-      [_ in never]: never
+      edit_history_with_user: {
+        Row: {
+          id: string
+          file_id: string
+          user_id: string | null
+          record_id: string | null
+          action: string
+          row_index: number | null
+          col_index: number | null
+          field_name: string | null
+          old_value: string | null
+          new_value: string | null
+          description: string | null
+          created_at: string
+          file_name: string | null
+          user_name: string | null
+          user_email: string | null
+        }
+        Relationships: []
+      }
+      shared_files_with_uploader: {
+        Row: {
+          id: string
+          file_name: string
+          file_size: number
+          row_count: number
+          created_at: string
+          updated_at: string
+          is_shared: boolean
+          shared_by: string | null
+          uploader_name: string | null
+          uploader_email: string | null
+          shared_by_name: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never

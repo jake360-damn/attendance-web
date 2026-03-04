@@ -36,26 +36,23 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set())
   const [fileName, setFileName] = useState(data.fileName)
   const [supabase, setSupabase] = useState<any>(null)
+  const [savedFileId, setSavedFileId] = useState<string | null>(null)
 
   useEffect(() => {
-    // 在客户端初始化 Supabase
     setSupabase(createBrowserClient())
   }, [])
 
-  // 过滤行
   const filteredRows = rows.filter(row => 
     row.some(cell => 
       String(cell).toLowerCase().includes(searchTerm.toLowerCase())
     )
   )
 
-  // 开始编辑单元格
   const startEdit = (rowIndex: number, colIndex: number, value: any) => {
     setEditingCell({ row: rowIndex, col: colIndex })
     setEditValue(String(value || ''))
   }
 
-  // 保存单元格编辑
   const saveEdit = () => {
     if (!editingCell) return
     
@@ -66,26 +63,22 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
     setEditValue('')
   }
 
-  // 取消编辑
   const cancelEdit = () => {
     setEditingCell(null)
     setEditValue('')
   }
 
-  // 添加新行
   const addRow = () => {
     const newRow = new Array(headers.length).fill('')
     setRows([...rows, newRow])
   }
 
-  // 删除选中行
   const deleteSelectedRows = () => {
     const newRows = rows.filter((_, index) => !selectedRows.has(index))
     setRows(newRows)
     setSelectedRows(new Set())
   }
 
-  // 切换行选择
   const toggleRowSelection = (rowIndex: number) => {
     const newSelected = new Set(selectedRows)
     if (newSelected.has(rowIndex)) {
@@ -96,7 +89,6 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
     setSelectedRows(newSelected)
   }
 
-  // 全选/取消全选
   const toggleSelectAll = () => {
     if (selectedRows.size === filteredRows.length) {
       setSelectedRows(new Set())
@@ -105,7 +97,6 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
     }
   }
 
-  // 保存到数据库
   const saveToDatabase = async () => {
     if (!supabase) {
       alert('Supabase 客户端未初始化')
@@ -119,13 +110,11 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
     
     setSaving(true)
     try {
-      // 先获取当前用户信息
       const { data: userData, error: userError } = await supabase.auth.getUser()
       if (userError || !userData?.user) {
         throw new Error('获取用户信息失败，请重新登录')
       }
 
-      // 使用 upsert 创建或更新用户资料（只提供必要字段）
       console.log('创建/更新用户资料...')
       const { error: profileError } = await supabase
         .from('profiles')
@@ -145,7 +134,6 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
       
       console.log('用户资料创建/更新成功')
 
-      // 保存文件信息
       const { data: fileData, error: fileError } = await supabase
         .from('excel_files')
         .insert({
@@ -162,16 +150,17 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
         throw new Error('文件保存失败: ' + fileError.message)
       }
 
-      // 检查 fileData 是否存在
       if (!fileData || !(fileData as any).id) {
         throw new Error('文件保存失败，未返回文件ID')
       }
 
-      // 保存考勤记录
+      const fileId = (fileData as any).id
+      setSavedFileId(fileId)
+
       const attendanceRecords = rows.map(row => {
         const record: any = {
           user_id: userId,
-          file_id: (fileData as any).id,
+          file_id: fileId,
         }
         headers.forEach((header, index) => {
           const key = header.toLowerCase().replace(/\s+/g, '_')
@@ -201,6 +190,15 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
         throw new Error('考勤记录保存失败: ' + recordsError.message)
       }
 
+      await supabase
+        .from('edit_history')
+        .insert({
+          file_id: fileId,
+          user_id: userId,
+          action: 'create',
+          description: `上传并创建了文件 "${fileName}"，包含 ${rows.length} 条记录`,
+        })
+
       alert('保存成功！')
     } catch (error: any) {
       console.error('保存失败:', error)
@@ -210,7 +208,6 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
     }
   }
 
-  // 导出Excel
   const exportExcel = () => {
     const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows])
     const workbook = XLSX.utils.book_new()
@@ -218,7 +215,6 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
     XLSX.writeFile(workbook, fileName)
   }
 
-  // 处理键盘事件
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       saveEdit()
@@ -229,7 +225,6 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
 
   return (
     <div className="space-y-4">
-      {/* 工具栏 */}
       <div className="bg-white rounded-lg shadow p-4 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-2">
@@ -291,7 +286,6 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
           </div>
         </div>
 
-        {/* 搜索栏 */}
         <div className="flex items-center gap-4">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -310,7 +304,6 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
         </div>
       </div>
 
-      {/* 表格 */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="overflow-x-auto max-h-[600px]">
           <table className="w-full">
@@ -391,7 +384,6 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
         )}
       </div>
 
-      {/* 快捷键提示 */}
       <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-600">
         <p className="font-medium mb-2">快捷键：</p>
         <div className="flex flex-wrap gap-4">
