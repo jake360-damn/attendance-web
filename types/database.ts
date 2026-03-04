@@ -219,6 +219,41 @@ export interface Database {
           }
         ]
       }
+      excel_data_raw: {
+        Row: {
+          id: string
+          file_id: string
+          headers: string[]
+          rows: any
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          file_id: string
+          headers: string[]
+          rows: any
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          file_id?: string
+          headers?: string[]
+          rows?: any
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "excel_data_raw_file_id_fkey"
+            columns: ["file_id"]
+            isOneToOne: false
+            referencedRelation: "excel_files"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       edit_history_with_user: {
