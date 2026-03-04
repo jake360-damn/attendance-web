@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   full_name TEXT,
   role TEXT DEFAULT 'user',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
   PRIMARY KEY (id)
 );
 
