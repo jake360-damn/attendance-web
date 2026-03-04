@@ -345,7 +345,7 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
                         />
                       ) : (
                         <span className="cursor-pointer hover:bg-yellow-100 px-2 py-1 rounded -mx-2">
-                          {cell || '-'}
+                          {(cell !== null && cell !== undefined && cell !== '') ? cell : '-'}
                         </span>
                       )}
                     </td>

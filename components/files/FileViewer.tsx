@@ -340,7 +340,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                           <span className={`cursor-pointer hover:bg-yellow-100 px-2 py-1 rounded -mx-2 ${
                             (isShared || isOwner) ? '' : 'cursor-default hover:bg-transparent'
                           }`}>
-                            {cell || '-'}
+                            {(cell !== null && cell !== undefined && cell !== '') ? cell : '-'}
                           </span>
                         )}
                       </td>
