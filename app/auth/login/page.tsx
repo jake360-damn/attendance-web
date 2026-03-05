@@ -8,51 +8,21 @@ import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import { Mail, Lock, Loader2 } from 'lucide-react'
 
+// 禁用静态生成，使用客户端渲染
 export const dynamic = 'force-dynamic'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const [confirming, setConfirming] = useState(false)
   const [error, setError] = useState('')
   const [supabase, setSupabase] = useState<any>(null)
   const router = useRouter()
 
   useEffect(() => {
+    // 在客户端初始化 Supabase
     setSupabase(createBrowserClient())
   }, [])
-
-  const confirmEmail = async (userEmail: string) => {
-    setConfirming(true)
-    try {
-      const response = await fetch('/api/auth/confirm-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: userEmail }),
-      })
-      const data = await response.json()
-      
-      if (response.ok) {
-        // 邮箱确认成功，重新尝试登录
-        const { error: loginError } = await supabase.auth.signInWithPassword({
-          email: userEmail,
-          password,
-        })
-        
-        if (!loginError) {
-          router.push('/dashboard')
-          router.refresh()
-          return
-        }
-      }
-      setError(data.error || '邮箱确认失败，请联系管理员')
-    } catch (err: any) {
-      setError(err.message || '邮箱确认失败')
-    } finally {
-      setConfirming(false)
-    }
-  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -72,18 +42,7 @@ export default function LoginPage() {
       router.push('/dashboard')
       router.refresh()
     } catch (error: any) {
-      const errorMessage = error.message || ''
-      
-      // 处理邮箱未确认的错误 - 自动确认邮箱
-      if (errorMessage.includes('Email not confirmed') || errorMessage.includes('not confirmed')) {
-        setError('检测到邮箱未验证，正在自动验证...')
-        await confirmEmail(email)
-        return
-      } else if (errorMessage.includes('Invalid login credentials')) {
-        setError('邮箱或密码错误')
-      } else {
-        setError(errorMessage || '登录失败')
-      }
+      setError(error.message || '登录失败')
     } finally {
       setLoading(false)
     }
@@ -98,15 +57,8 @@ export default function LoginPage() {
         </div>
 
         {error && (
-          <div className={`p-4 rounded-lg mb-6 text-sm ${
-            error.includes('正在') ? 'bg-blue-50 text-blue-600' : 'bg-red-50 text-red-600'
-          }`}>
-            {confirming ? (
-              <span className="flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                正在验证邮箱，请稍候...
-              </span>
-            ) : error}
+          <div className="bg-red-50 text-red-600 p-4 rounded-lg mb-6 text-sm">
+            {error}
           </div>
         )}
 
@@ -139,7 +91,7 @@ export default function LoginPage() {
 
           <Button
             type="submit"
-            isLoading={loading || confirming}
+            isLoading={loading}
             className="w-full"
             size="lg"
           >
