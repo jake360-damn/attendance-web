@@ -5,10 +5,9 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@/lib/supabase'
 import Button from '@/components/ui/Button'
-import Input from '@/components/ui/Input'
+import WaveInput from '@/components/ui/WaveInput'
 import { Mail, Lock, Loader2 } from 'lucide-react'
 
-// 禁用静态生成，使用客户端渲染
 export const dynamic = 'force-dynamic'
 
 export default function LoginPage() {
@@ -20,7 +19,6 @@ export default function LoginPage() {
   const router = useRouter()
 
   useEffect(() => {
-    // 在客户端初始化 Supabase
     setSupabase(createBrowserClient())
   }, [])
 
@@ -62,41 +60,45 @@ export default function LoginPage() {
           </div>
         )}
 
-        <form onSubmit={handleLogin} className="space-y-6">
+        <form onSubmit={handleLogin} className="space-y-2">
           <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 z-10" />
-            <Input
-              type="email"
-              label="邮箱地址"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="请输入邮箱"
-              required
-              className="pl-10"
-            />
+            <Mail className="absolute left-3 top-3 text-gray-400 w-5 h-5 z-10" />
+            <div className="pl-8">
+              <WaveInput
+                type="email"
+                label="邮箱地址"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder=" "
+                required
+              />
+            </div>
           </div>
 
           <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 z-10" />
-            <Input
-              type="password"
-              label="密码"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="请输入密码"
-              required
-              className="pl-10"
-            />
+            <Lock className="absolute left-3 top-3 text-gray-400 w-5 h-5 z-10" />
+            <div className="pl-8">
+              <WaveInput
+                type="password"
+                label="密码"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder=" "
+                required
+              />
+            </div>
           </div>
 
-          <Button
-            type="submit"
-            isLoading={loading}
-            className="w-full"
-            size="lg"
-          >
-            登录
-          </Button>
+          <div className="pt-4">
+            <Button
+              type="submit"
+              isLoading={loading}
+              className="w-full"
+              size="lg"
+            >
+              登录
+            </Button>
+          </div>
         </form>
 
         <div className="mt-6 text-center">
