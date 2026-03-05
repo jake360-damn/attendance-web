@@ -41,6 +41,7 @@ export default function RegisterPage() {
           data: {
             full_name: fullName,
           },
+          email_confirm: true, // 自动确认邮箱，跳过验证
         },
       })
 
@@ -84,7 +85,7 @@ export default function RegisterPage() {
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">注册成功！</h2>
           <p className="text-gray-600 mb-6">
-            请查看您的邮箱，点击验证链接完成账户激活。
+            您的账户已创建，现在可以直接登录。
           </p>
           <Link
             href="/auth/login"

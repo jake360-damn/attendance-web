@@ -42,7 +42,14 @@ export default function LoginPage() {
       router.push('/dashboard')
       router.refresh()
     } catch (error: any) {
-      setError(error.message || '登录失败')
+      // 处理邮箱未确认的错误
+      if (error.message?.includes('Email not confirmed') || error.message?.includes('not confirmed')) {
+        setError('邮箱未验证，请检查邮箱或重新注册')
+      } else if (error.message?.includes('Invalid login credentials')) {
+        setError('邮箱或密码错误')
+      } else {
+        setError(error.message || '登录失败')
+      }
     } finally {
       setLoading(false)
     }
