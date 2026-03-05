@@ -38,27 +38,27 @@ const WaveInput = forwardRef<HTMLInputElement, WaveInputProps>(({
         required={required}
         name={name}
         minLength={minLength}
-        className="input"
+        className="wave-input"
       />
-      <label className="label">
+      <label className="wave-label">
         {labelChars.map((char, index) => (
           <span
             key={index}
-            className="label-char"
+            className="wave-label-char"
             style={{ '--index': index } as React.CSSProperties}
           >
             {char === ' ' ? '\u00A0' : char}
           </span>
         ))}
       </label>
-      <div className="bar"></div>
+      <div className="wave-bar"></div>
       <style jsx>{`
         .wave-group {
           position: relative;
           margin-bottom: 2rem;
         }
 
-        .wave-group .input {
+        .wave-group .wave-input {
           font-size: 16px;
           padding: 10px 10px 10px 5px;
           display: block;
@@ -66,13 +66,17 @@ const WaveInput = forwardRef<HTMLInputElement, WaveInputProps>(({
           border: none;
           border-bottom: 1px solid #515151;
           background: transparent;
-        }
-
-        .wave-group .input:focus {
+          border-radius: 0;
           outline: none;
         }
 
-        .wave-group .label {
+        .wave-group .wave-input:focus {
+          outline: none;
+          box-shadow: none;
+          border-color: #515151;
+        }
+
+        .wave-group .wave-label {
           color: #999;
           font-size: 18px;
           font-weight: normal;
@@ -83,26 +87,26 @@ const WaveInput = forwardRef<HTMLInputElement, WaveInputProps>(({
           display: flex;
         }
 
-        .wave-group .label-char {
+        .wave-group .wave-label-char {
           transition: 0.2s ease all;
           transition-delay: calc(var(--index) * .05s);
         }
 
-        .wave-group .input:focus ~ label .label-char,
-        .wave-group .input:not(:placeholder-shown) ~ label .label-char {
+        .wave-group .wave-input:focus ~ label .wave-label-char,
+        .wave-group .wave-input:not(:placeholder-shown) ~ label .wave-label-char {
           transform: translateY(-20px);
           font-size: 14px;
           color: #5264AE;
         }
 
-        .wave-group .bar {
+        .wave-group .wave-bar {
           position: relative;
           display: block;
           width: 100%;
         }
 
-        .wave-group .bar:before,
-        .wave-group .bar:after {
+        .wave-group .wave-bar:before,
+        .wave-group .wave-bar:after {
           content: '';
           height: 2px;
           width: 0;
@@ -114,16 +118,16 @@ const WaveInput = forwardRef<HTMLInputElement, WaveInputProps>(({
           -webkit-transition: 0.2s ease all;
         }
 
-        .wave-group .bar:before {
+        .wave-group .wave-bar:before {
           left: 50%;
         }
 
-        .wave-group .bar:after {
+        .wave-group .wave-bar:after {
           right: 50%;
         }
 
-        .wave-group .input:focus ~ .bar:before,
-        .wave-group .input:focus ~ .bar:after {
+        .wave-group .wave-input:focus ~ .wave-bar:before,
+        .wave-group .wave-input:focus ~ .wave-bar:after {
           width: 50%;
         }
       `}</style>
