@@ -65,7 +65,24 @@ export default function RegisterPage() {
         }
       }
 
-      setSuccess(true)
+      // 注册成功后自动登录并跳转
+      if (data.session) {
+        router.push('/dashboard')
+        router.refresh()
+      } else {
+        // 如果没有自动创建会话，尝试手动登录
+        const { error: loginError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        })
+        if (loginError) {
+          // 如果自动登录失败，显示成功提示让用户手动登录
+          setSuccess(true)
+        } else {
+          router.push('/dashboard')
+          router.refresh()
+        }
+      }
     } catch (error: any) {
       setError(error.message || '注册失败')
     } finally {
@@ -84,7 +101,7 @@ export default function RegisterPage() {
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">注册成功！</h2>
           <p className="text-gray-600 mb-6">
-            请查看您的邮箱，点击验证链接完成账户激活。
+            您的账户已创建成功，现在可以使用邮箱和密码登录系统。
           </p>
           <Link
             href="/auth/login"
