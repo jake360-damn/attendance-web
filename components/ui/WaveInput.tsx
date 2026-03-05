@@ -11,6 +11,7 @@ interface WaveInputProps {
   required?: boolean
   className?: string
   name?: string
+  minLength?: number
 }
 
 const WaveInput = forwardRef<HTMLInputElement, WaveInputProps>(({
@@ -21,7 +22,8 @@ const WaveInput = forwardRef<HTMLInputElement, WaveInputProps>(({
   placeholder,
   required = false,
   className = '',
-  name
+  name,
+  minLength
 }, ref) => {
   const labelChars = label.split('')
 
@@ -35,6 +37,7 @@ const WaveInput = forwardRef<HTMLInputElement, WaveInputProps>(({
         placeholder={placeholder}
         required={required}
         name={name}
+        minLength={minLength}
         className="input"
       />
       <label className="label">
