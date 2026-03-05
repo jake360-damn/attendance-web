@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@/lib/supabase'
@@ -8,7 +8,6 @@ import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import { Mail, Lock, User, Loader2 } from 'lucide-react'
 
-// 禁用静态生成，使用客户端渲染
 export const dynamic = 'force-dynamic'
 
 export default function RegisterPage() {
@@ -18,52 +17,32 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
-  const [supabase, setSupabase] = useState<any>(null)
   const router = useRouter()
-
-  useEffect(() => {
-    // 在客户端初始化 Supabase
-    setSupabase(createBrowserClient())
-  }, [])
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!supabase) return
     
     setLoading(true)
     setError('')
 
     try {
-      const { error: signUpError, data } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-          },
-          email_confirm: true, // 自动确认邮箱，跳过验证
+      // 使用 API 路由注册（自动确认邮箱）
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          email,
+          password,
+          fullName,
+        }),
       })
 
-      if (signUpError) throw signUpError
+      const data = await response.json()
 
-      // 创建用户资料（使用 upsert 并忽略 RLS 错误）
-      if (data.user) {
-        try {
-          await supabase.from('profiles').upsert({
-            id: data.user.id,
-            email: data.user.email!,
-            full_name: fullName,
-            role: 'user',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          } as any, {
-            onConflict: 'id'
-          })
-        } catch (profileError) {
-          // 忽略 RLS 错误，用户资料会在登录时自动创建
-          console.log('Profile creation skipped:', profileError)
-        }
+      if (!response.ok) {
+        throw new Error(data.error || '注册失败')
       }
 
       setSuccess(true)
