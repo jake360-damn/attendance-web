@@ -2,10 +2,21 @@ import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 export async function POST(request: Request) {
   try {
+    // 检查环境变量
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('Missing environment variables:', { 
+        hasUrl: !!supabaseUrl, 
+        hasKey: !!supabaseServiceKey 
+      })
+      return NextResponse.json({ 
+        error: '服务器配置错误，请联系管理员设置 SUPABASE_SERVICE_ROLE_KEY 环境变量' 
+      }, { status: 500 })
+    }
+
     const { email, password, fullName } = await request.json()
 
     // 使用 service role key 创建 admin 客户端
