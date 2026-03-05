@@ -8,6 +8,7 @@ import ExcelEditor from '@/components/excel/ExcelEditor'
 import FileList from '@/components/files/FileList'
 import FileViewer from '@/components/files/FileViewer'
 import EditHistoryModal from '@/components/files/EditHistoryModal'
+import GlobalHistoryModal from '@/components/files/GlobalHistoryModal'
 import { User, SharedFile } from '@/types'
 import { 
   LogOut, 
@@ -17,7 +18,8 @@ import {
   Upload,
   Shield,
   Sparkles,
-  ChevronRight
+  ChevronRight,
+  Clock
 } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
@@ -34,6 +36,7 @@ export default function DashboardPage() {
   const [selectedFile, setSelectedFile] = useState<SharedFile | null>(null)
   const [historyFileId, setHistoryFileId] = useState<string | null>(null)
   const [historyFileName, setHistoryFileName] = useState<string>('')
+  const [showGlobalHistory, setShowGlobalHistory] = useState(false)
   const [files, setFiles] = useState<SharedFile[]>([])
   const router = useRouter()
 
@@ -189,10 +192,19 @@ export default function DashboardPage() {
             
             <div className="flex items-center gap-3">
               {isAdmin && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-full text-xs font-medium shadow-lg shadow-purple-500/25">
-                  <Shield className="w-3.5 h-3.5" />
-                  管理员
-                </span>
+                <>
+                  <button
+                    onClick={() => setShowGlobalHistory(true)}
+                    className="flex items-center gap-2 px-3 py-1.5 text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded-lg transition-all duration-200"
+                  >
+                    <Clock className="w-4 h-4" />
+                    <span className="text-sm font-medium hidden sm:inline">全局历史</span>
+                  </button>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-full text-xs font-medium shadow-lg shadow-purple-500/25">
+                    <Shield className="w-3.5 h-3.5" />
+                    管理员
+                  </span>
+                </>
               )}
               <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-full">
                 <div className="w-7 h-7 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full flex items-center justify-center">
@@ -277,6 +289,12 @@ export default function DashboardPage() {
           fileId={historyFileId}
           fileName={historyFileName}
           onClose={handleCloseHistory}
+        />
+      )}
+
+      {showGlobalHistory && (
+        <GlobalHistoryModal
+          onClose={() => setShowGlobalHistory(false)}
         />
       )}
     </div>

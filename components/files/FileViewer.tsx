@@ -17,7 +17,10 @@ import {
   Table,
   Edit3,
   Check,
-  X as XIcon
+  X as XIcon,
+  Plus,
+  Trash2,
+  Save
 } from 'lucide-react'
 
 interface FileViewerProps {
@@ -38,6 +41,8 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
   const [supabase, setSupabase] = useState<any>(null)
   const [isShared, setIsShared] = useState(file.is_shared)
   const [rawDataId, setRawDataId] = useState<string | null>(null)
+  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set())
+  const [savingChanges, setSavingChanges] = useState(false)
 
   const isAdmin = currentUser?.role === 'admin'
   const isOwner = file.uploader_name === currentUser?.full_name || 
@@ -164,6 +169,94 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
     setEditValue('')
   }
 
+  const addRow = () => {
+    if (!canEdit) return
+    const newRow = new Array(headers.length).fill('')
+    setRows([...rows, newRow])
+  }
+
+  const toggleRowSelection = (rowIndex: number) => {
+    if (!canEdit) return
+    const newSelected = new Set(selectedRows)
+    if (newSelected.has(rowIndex)) {
+      newSelected.delete(rowIndex)
+    } else {
+      newSelected.add(rowIndex)
+    }
+    setSelectedRows(newSelected)
+  }
+
+  const toggleSelectAll = () => {
+    if (!canEdit) return
+    if (selectedRows.size === filteredRows.length) {
+      setSelectedRows(new Set())
+    } else {
+      setSelectedRows(new Set(filteredRows.map((_, index) => index)))
+    }
+  }
+
+  const deleteSelectedRows = async () => {
+    if (!canEdit || selectedRows.size === 0 || !supabase || !rawDataId) return
+    
+    const deletedRowIndices = Array.from(selectedRows).sort((a, b) => a - b)
+    const newRows = rows.filter((_, index) => !selectedRows.has(index))
+    
+    setSavingChanges(true)
+    try {
+      await supabase
+        .from('excel_data_raw')
+        .update({ rows: newRows })
+        .eq('id', rawDataId)
+
+      await supabase
+        .from('edit_history')
+        .insert({
+          file_id: file.id,
+          user_id: currentUser?.id,
+          action: 'delete',
+          description: `删除了 ${deletedRowIndices.length} 行数据（原第 ${deletedRowIndices.map(i => i + 1).join(', ')} 行）`,
+        })
+
+      setRows(newRows)
+      setSelectedRows(new Set())
+    } catch (error) {
+      console.error('删除行失败:', error)
+      alert('删除失败')
+    } finally {
+      setSavingChanges(false)
+    }
+  }
+
+  const saveAllChanges = async () => {
+    if (!supabase || !rawDataId) return
+    
+    setSavingChanges(true)
+    try {
+      await supabase
+        .from('excel_data_raw')
+        .update({ 
+          rows: rows,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', rawDataId)
+
+      await supabase
+        .from('excel_files')
+        .update({ 
+          row_count: rows.length,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', file.id)
+
+      alert('保存成功！')
+    } catch (error) {
+      console.error('保存失败:', error)
+      alert('保存失败')
+    } finally {
+      setSavingChanges(false)
+    }
+  }
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       saveEdit()
@@ -244,6 +337,39 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
           </div>
 
           <div className="flex items-center gap-2">
+            {canEdit && (
+              <>
+                <button
+                  onClick={addRow}
+                  className="btn btn-primary"
+                >
+                  <Plus className="w-4 h-4" />
+                  添加行
+                </button>
+                {selectedRows.size > 0 && (
+                  <button
+                    onClick={deleteSelectedRows}
+                    disabled={savingChanges}
+                    className="btn btn-danger"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    删除选中 ({selectedRows.size})
+                  </button>
+                )}
+                <button
+                  onClick={saveAllChanges}
+                  disabled={savingChanges}
+                  className="btn bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700 shadow-lg shadow-indigo-500/25"
+                >
+                  {savingChanges ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4" />
+                  )}
+                  {savingChanges ? '保存中...' : '保存'}
+                </button>
+              </>
+            )}
             <button
               onClick={onViewHistory}
               className="btn btn-secondary"
@@ -313,6 +439,16 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
             <table className="w-full">
               <thead className="table-header sticky top-0 z-10">
                 <tr>
+                  {canEdit && (
+                    <th className="table-cell w-12">
+                      <input
+                        type="checkbox"
+                        checked={selectedRows.size === filteredRows.length && filteredRows.length > 0}
+                        onChange={toggleSelectAll}
+                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                    </th>
+                  )}
                   <th className="table-cell font-semibold text-gray-600 w-16">
                     #
                   </th>
@@ -328,7 +464,17 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
               </thead>
               <tbody>
                 {filteredRows.map((row, rowIndex) => (
-                  <tr key={rowIndex} className="table-row">
+                  <tr key={rowIndex} className={`table-row ${selectedRows.has(rowIndex) ? 'bg-blue-50' : ''}`}>
+                    {canEdit && (
+                      <td className="table-cell">
+                        <input
+                          type="checkbox"
+                          checked={selectedRows.has(rowIndex)}
+                          onChange={() => toggleRowSelection(rowIndex)}
+                          className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                      </td>
+                    )}
                     <td className="table-cell text-gray-400 font-medium">
                       {rowIndex + 1}
                     </td>
@@ -402,9 +548,14 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
           <div>
             <p className="font-medium text-blue-900 mb-1">操作说明</p>
             <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-blue-700">
-              <span>点击单元格 - 编辑内容</span>
-              <span>Enter - 保存编辑</span>
-              <span>Escape - 取消编辑</span>
+              {canEdit && (
+                <>
+                  <span>点击单元格 - 编辑内容</span>
+                  <span>Enter - 保存编辑</span>
+                  <span>Escape - 取消编辑</span>
+                  <span>复选框 - 批量删除</span>
+                </>
+              )}
               {isAdmin && <span className="text-purple-600 font-medium">管理员可控制文件共享状态</span>}
             </div>
           </div>
