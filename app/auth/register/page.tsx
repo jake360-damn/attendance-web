@@ -5,10 +5,9 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@/lib/supabase'
 import Button from '@/components/ui/Button'
-import Input from '@/components/ui/Input'
+import WaveInput from '@/components/ui/WaveInput'
 import { Mail, Lock, User, Loader2 } from 'lucide-react'
 
-// 禁用静态生成，使用客户端渲染
 export const dynamic = 'force-dynamic'
 
 export default function RegisterPage() {
@@ -22,7 +21,6 @@ export default function RegisterPage() {
   const router = useRouter()
 
   useEffect(() => {
-    // 在客户端初始化 Supabase
     setSupabase(createBrowserClient())
   }, [])
 
@@ -46,7 +44,6 @@ export default function RegisterPage() {
 
       if (signUpError) throw signUpError
 
-      // 创建用户资料（使用 upsert 并忽略 RLS 错误）
       if (data.user) {
         try {
           await supabase.from('profiles').upsert({
@@ -60,23 +57,19 @@ export default function RegisterPage() {
             onConflict: 'id'
           })
         } catch (profileError) {
-          // 忽略 RLS 错误，用户资料会在登录时自动创建
           console.log('Profile creation skipped:', profileError)
         }
       }
 
-      // 注册成功后自动登录并跳转
       if (data.session) {
         router.push('/dashboard')
         router.refresh()
       } else {
-        // 如果没有自动创建会话，尝试手动登录
         const { error: loginError } = await supabase.auth.signInWithPassword({
           email,
           password,
         })
         if (loginError) {
-          // 如果自动登录失败，显示成功提示让用户手动登录
           setSuccess(true)
         } else {
           router.push('/dashboard')
@@ -128,55 +121,60 @@ export default function RegisterPage() {
           </div>
         )}
 
-        <form onSubmit={handleRegister} className="space-y-6">
+        <form onSubmit={handleRegister} className="space-y-2">
           <div className="relative">
-            <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 z-10" />
-            <Input
-              type="text"
-              label="姓名"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              placeholder="请输入姓名"
-              required
-              className="pl-10"
-            />
+            <User className="absolute left-3 top-3 text-gray-400 w-5 h-5 z-10" />
+            <div className="pl-8">
+              <WaveInput
+                type="text"
+                label="姓名"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder=" "
+                required
+              />
+            </div>
           </div>
 
           <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 z-10" />
-            <Input
-              type="email"
-              label="邮箱地址"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="请输入邮箱"
-              required
-              className="pl-10"
-            />
+            <Mail className="absolute left-3 top-3 text-gray-400 w-5 h-5 z-10" />
+            <div className="pl-8">
+              <WaveInput
+                type="email"
+                label="邮箱地址"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder=" "
+                required
+              />
+            </div>
           </div>
 
           <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 z-10" />
-            <Input
-              type="password"
-              label="密码"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="请输入密码（至少6位）"
-              minLength={6}
-              required
-              className="pl-10"
-            />
+            <Lock className="absolute left-3 top-3 text-gray-400 w-5 h-5 z-10" />
+            <div className="pl-8">
+              <WaveInput
+                type="password"
+                label="密码"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder=" "
+                minLength={6}
+                required
+              />
+            </div>
           </div>
 
-          <Button
-            type="submit"
-            isLoading={loading}
-            className="w-full"
-            size="lg"
-          >
-            注册
-          </Button>
+          <div className="pt-4">
+            <Button
+              type="submit"
+              isLoading={loading}
+              className="w-full"
+              size="lg"
+            >
+              注册
+            </Button>
+          </div>
         </form>
 
         <div className="mt-6 text-center">
