@@ -312,10 +312,15 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
               className="btn bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700 shadow-lg shadow-indigo-500/25"
             >
               {saving ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Save className="w-4 h-4" />
-              )}
+              <svg className="w-4 h-4 pl-btn" viewBox="0 0 128 128" fill="none">
+                <circle className="pl__ring pl__ring--a" cx="64" cy="64" r="56" strokeWidth="12" fill="none" />
+                <circle className="pl__ring pl__ring--b" cx="64" cy="64" r="56" strokeWidth="12" fill="none" />
+                <circle className="pl__ring pl__ring--c" cx="64" cy="64" r="56" strokeWidth="12" fill="none" />
+                <circle className="pl__ring pl__ring--d" cx="64" cy="64" r="56" strokeWidth="12" fill="none" />
+              </svg>
+            ) : (
+              <Save className="w-4 h-4" />
+            )}
               {saving ? '保存中...' : '保存'}
             </button>
           </div>

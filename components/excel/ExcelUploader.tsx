@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import * as XLSX from 'xlsx'
+import Loading from '@/components/ui/Loading'
 import { Upload, FileSpreadsheet, AlertCircle, Cloud, FileCheck } from 'lucide-react'
 
 interface ExcelUploaderProps {
@@ -148,16 +149,7 @@ export default function ExcelUploader({ onUpload }: ExcelUploaderProps) {
         <label htmlFor="excel-upload" className="cursor-pointer block">
           {uploading ? (
             <div className="space-y-6 animate-fade-in">
-              <div className="relative inline-flex">
-                <div className="w-20 h-20 border-4 border-blue-200 rounded-full animate-spin border-t-blue-600"></div>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <Cloud className="w-8 h-8 text-blue-600 animate-pulse" />
-                </div>
-              </div>
-              <div>
-                <p className="text-lg font-semibold text-gray-900">正在解析文件...</p>
-                <p className="text-sm text-gray-500 mt-1">请稍候</p>
-              </div>
+              <Loading size="lg" text="正在解析文件..." />
             </div>
           ) : (
             <div className="space-y-6">

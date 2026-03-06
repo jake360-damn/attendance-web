@@ -72,7 +72,12 @@ export default function DeleteConfirmModal({
             >
               {isDeleting ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  <svg className="w-4 h-4 pl-btn" viewBox="0 0 128 128" fill="none">
+                    <circle className="pl__ring pl__ring--a" cx="64" cy="64" r="56" strokeWidth="12" fill="none" />
+                    <circle className="pl__ring pl__ring--b" cx="64" cy="64" r="56" strokeWidth="12" fill="none" />
+                    <circle className="pl__ring pl__ring--c" cx="64" cy="64" r="56" strokeWidth="12" fill="none" />
+                    <circle className="pl__ring pl__ring--d" cx="64" cy="64" r="56" strokeWidth="12" fill="none" />
+                  </svg>
                   删除中...
                 </>
               ) : (
