@@ -97,60 +97,62 @@ export default function LoginPage() {
     return () => window.removeEventListener('mousemove', handleMouseMove)
   }, [])
 
-  const initVanta = () => {
-    if (!vantaRef.current) return false
-    if (!window.VANTA || !window.THREE) return false
-    
-    if (vantaEffectRef.current) {
-      vantaEffectRef.current.destroy()
-    }
-    
-    vantaEffectRef.current = window.VANTA.BIRDS({
-      el: vantaRef.current,
-      mouseControls: true,
-      touchControls: true,
-      gyroControls: false,
-      minHeight: 200.00,
-      minWidth: 200.00,
-      scale: 1.00,
-      scaleMobile: 1.00,
-      backgroundColor: 0x0e3939,
-      color1: 0x823838,
-      color2: 0x00dfff,
-      birdSize: 1,
-      wingSpan: 30.00,
-      speedLimit: 5.00,
-      separation: 20.00,
-      alignment: 20.00,
-      cohesion: 20.00,
-      quantity: 5.00
-    })
-    return true
-  }
-
   useEffect(() => {
+    let checkInterval: NodeJS.Timeout | null = null
+    let timeout: NodeJS.Timeout | null = null
+    let isDestroyed = false
+    
     const tryInitVanta = () => {
-      if (initVanta()) return
+      if (isDestroyed) return
       
-      const checkInterval = setInterval(() => {
-        if (initVanta()) {
-          clearInterval(checkInterval)
-        }
-      }, 100)
-      
-      const timeout = setTimeout(() => {
-        clearInterval(checkInterval)
-      }, 3000)
-      
-      return () => {
-        clearInterval(checkInterval)
-        clearTimeout(timeout)
+      if (!vantaRef.current) {
+        return
       }
+      
+      if (!window.VANTA || !window.THREE) {
+        return
+      }
+      
+      if (vantaEffectRef.current) {
+        vantaEffectRef.current.destroy()
+      }
+      
+      vantaEffectRef.current = window.VANTA.BIRDS({
+        el: vantaRef.current,
+        mouseControls: true,
+        touchControls: true,
+        gyroControls: false,
+        minHeight: 200.00,
+        minWidth: 200.00,
+        scale: 1.00,
+        scaleMobile: 1.00,
+        backgroundColor: 0x0e3939,
+        color1: 0x823838,
+        color2: 0x00dfff,
+        birdSize: 1,
+        wingSpan: 30.00,
+        speedLimit: 5.00,
+        separation: 20.00,
+        alignment: 20.00,
+        cohesion: 20.00,
+        quantity: 5.00
+      })
+      
+      if (checkInterval) clearInterval(checkInterval)
+      if (timeout) clearTimeout(timeout)
     }
+    
+    checkInterval = setInterval(tryInitVanta, 100)
+    timeout = setTimeout(() => {
+      if (checkInterval) clearInterval(checkInterval)
+    }, 5000)
     
     tryInitVanta()
     
     return () => {
+      isDestroyed = true
+      if (checkInterval) clearInterval(checkInterval)
+      if (timeout) clearTimeout(timeout)
       if (vantaEffectRef.current) {
         vantaEffectRef.current.destroy()
         vantaEffectRef.current = null
@@ -191,9 +193,6 @@ export default function LoginPage() {
       <Script 
         src="/vanta.birds.min.js" 
         strategy="afterInteractive"
-        onLoad={() => {
-          initVanta()
-        }}
       />
       
       <div className="min-h-screen flex items-center justify-center p-4 overflow-x-hidden relative">
