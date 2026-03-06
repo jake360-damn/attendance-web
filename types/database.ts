@@ -225,6 +225,8 @@ export interface Database {
           file_id: string
           headers: string[]
           rows: any
+          column_widths: number[] | null
+          row_heights: number[] | null
           created_at: string
           updated_at: string
         }
@@ -233,6 +235,8 @@ export interface Database {
           file_id: string
           headers: string[]
           rows: any
+          column_widths?: number[] | null
+          row_heights?: number[] | null
           created_at?: string
           updated_at?: string
         }
@@ -241,6 +245,8 @@ export interface Database {
           file_id?: string
           headers?: string[]
           rows?: any
+          column_widths?: number[] | null
+          row_heights?: number[] | null
           created_at?: string
           updated_at?: string
         }

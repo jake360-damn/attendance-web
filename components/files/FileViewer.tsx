@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { createBrowserClient } from '@/lib/supabase'
 import { SharedFile, User } from '@/types'
 import * as XLSX from 'xlsx'
@@ -20,7 +20,11 @@ import {
   X as XIcon,
   Plus,
   Trash2,
-  Save
+  Save,
+  Undo2,
+  Redo2,
+  Wand2,
+  Maximize2
 } from 'lucide-react'
 
 interface FileViewerProps {
@@ -29,6 +33,18 @@ interface FileViewerProps {
   onBack: () => void
   onViewHistory: () => void
 }
+
+interface HistoryState {
+  rows: any[][]
+  headers: string[]
+  columnWidths: number[]
+  rowHeights: number[]
+}
+
+const DEFAULT_COLUMN_WIDTH = 150
+const DEFAULT_ROW_HEIGHT = 40
+const MIN_COLUMN_WIDTH = 50
+const MIN_ROW_HEIGHT = 24
 
 export default function FileViewer({ file, currentUser, onBack, onViewHistory }: FileViewerProps) {
   const [headers, setHeaders] = useState<string[]>([])
@@ -43,6 +59,20 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
   const [rawDataId, setRawDataId] = useState<string | null>(null)
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set())
   const [savingChanges, setSavingChanges] = useState(false)
+  
+  const [columnWidths, setColumnWidths] = useState<number[]>([])
+  const [rowHeights, setRowHeights] = useState<number[]>([])
+  const [resizingCol, setResizingCol] = useState<number | null>(null)
+  const [resizingRow, setResizingRow] = useState<number | null>(null)
+  const [startX, setStartX] = useState(0)
+  const [startY, setStartY] = useState(0)
+  const [startWidth, setStartWidth] = useState(0)
+  const [startHeight, setStartHeight] = useState(0)
+  
+  const [history, setHistory] = useState<HistoryState[]>([])
+  const [historyIndex, setHistoryIndex] = useState(-1)
+  
+  const tableRef = useRef<HTMLTableElement>(null)
 
   const isAdmin = currentUser?.role === 'admin'
   const isOwner = file.uploader_name === currentUser?.full_name || 
@@ -58,6 +88,38 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
     fetchFileData()
   }, [supabase])
 
+  const saveToHistory = useCallback((newState: HistoryState) => {
+    const newHistory = history.slice(0, historyIndex + 1)
+    newHistory.push(newState)
+    if (newHistory.length > 50) {
+      newHistory.shift()
+    }
+    setHistory(newHistory)
+    setHistoryIndex(newHistory.length - 1)
+  }, [history, historyIndex])
+
+  const undo = useCallback(() => {
+    if (historyIndex > 0) {
+      const prevState = history[historyIndex - 1]
+      setRows(prevState.rows)
+      setHeaders(prevState.headers)
+      setColumnWidths(prevState.columnWidths)
+      setRowHeights(prevState.rowHeights)
+      setHistoryIndex(historyIndex - 1)
+    }
+  }, [history, historyIndex])
+
+  const redo = useCallback(() => {
+    if (historyIndex < history.length - 1) {
+      const nextState = history[historyIndex + 1]
+      setRows(nextState.rows)
+      setHeaders(nextState.headers)
+      setColumnWidths(nextState.columnWidths)
+      setRowHeights(nextState.rowHeights)
+      setHistoryIndex(historyIndex + 1)
+    }
+  }, [history, historyIndex])
+
   const fetchFileData = async () => {
     if (!supabase) return
     
@@ -70,9 +132,25 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
         .single()
 
       if (rawData && !rawError) {
-        setHeaders(rawData.headers || [])
-        setRows(rawData.rows || [])
+        const loadedHeaders = rawData.headers || []
+        const loadedRows = rawData.rows || []
+        const loadedColWidths = rawData.column_widths || loadedHeaders.map(() => DEFAULT_COLUMN_WIDTH)
+        const loadedRowHeights = rawData.row_heights || loadedRows.map(() => DEFAULT_ROW_HEIGHT)
+        
+        setHeaders(loadedHeaders)
+        setRows(loadedRows)
         setRawDataId(rawData.id)
+        setColumnWidths(loadedColWidths)
+        setRowHeights(loadedRowHeights)
+        
+        const initialState: HistoryState = {
+          rows: loadedRows,
+          headers: loadedHeaders,
+          columnWidths: loadedColWidths,
+          rowHeights: loadedRowHeights
+        }
+        setHistory([initialState])
+        setHistoryIndex(0)
       } else {
         const { data: records, error: recordsError } = await supabase
           .from('attendance_records')
@@ -94,6 +172,17 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
           ])
           setHeaders(recordHeaders)
           setRows(recordRows)
+          setColumnWidths(recordHeaders.map(() => DEFAULT_COLUMN_WIDTH))
+          setRowHeights(recordRows.map(() => DEFAULT_ROW_HEIGHT))
+          
+          const initialState: HistoryState = {
+            rows: recordRows,
+            headers: recordHeaders,
+            columnWidths: recordHeaders.map(() => DEFAULT_COLUMN_WIDTH),
+            rowHeights: recordRows.map(() => DEFAULT_ROW_HEIGHT)
+          }
+          setHistory([initialState])
+          setHistoryIndex(0)
         } else {
           setHeaders([])
           setRows([])
@@ -137,6 +226,13 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
     setRows(newRows)
     setEditingCell(null)
     setEditValue('')
+    
+    saveToHistory({
+      rows: newRows,
+      headers,
+      columnWidths,
+      rowHeights
+    })
 
     if (rawDataId) {
       try {
@@ -172,7 +268,16 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
   const addRow = () => {
     if (!canEdit) return
     const newRow = new Array(headers.length).fill('')
-    setRows([...rows, newRow])
+    const newRows = [...rows, newRow]
+    setRows(newRows)
+    setRowHeights([...rowHeights, DEFAULT_ROW_HEIGHT])
+    
+    saveToHistory({
+      rows: newRows,
+      headers,
+      columnWidths,
+      rowHeights: [...rowHeights, DEFAULT_ROW_HEIGHT]
+    })
   }
 
   const toggleRowSelection = (rowIndex: number) => {
@@ -200,12 +305,13 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
     
     const deletedRowIndices = Array.from(selectedRows).sort((a, b) => a - b)
     const newRows = rows.filter((_, index) => !selectedRows.has(index))
+    const newRowHeights = rowHeights.filter((_, index) => !selectedRows.has(index))
     
     setSavingChanges(true)
     try {
       await supabase
         .from('excel_data_raw')
-        .update({ rows: newRows })
+        .update({ rows: newRows, row_heights: newRowHeights })
         .eq('id', rawDataId)
 
       await supabase
@@ -218,7 +324,15 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
         })
 
       setRows(newRows)
+      setRowHeights(newRowHeights)
       setSelectedRows(new Set())
+      
+      saveToHistory({
+        rows: newRows,
+        headers,
+        columnWidths,
+        rowHeights: newRowHeights
+      })
     } catch (error) {
       console.error('删除行失败:', error)
       alert('删除失败')
@@ -236,6 +350,8 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
         .from('excel_data_raw')
         .update({ 
           rows: rows,
+          row_heights: rowHeights,
+          column_widths: columnWidths,
           updated_at: new Date().toISOString()
         })
         .eq('id', rawDataId)
@@ -263,6 +379,136 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
     } else if (e.key === 'Escape') {
       cancelEdit()
     }
+  }
+
+  const handleGlobalKeyDown = useCallback((e: KeyboardEvent) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+      e.preventDefault()
+      if (e.shiftKey) {
+        redo()
+      } else {
+        undo()
+      }
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+      e.preventDefault()
+      redo()
+    }
+  }, [undo, redo])
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleGlobalKeyDown)
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown)
+  }, [handleGlobalKeyDown])
+
+  const handleColMouseDown = (e: React.MouseEvent, colIndex: number) => {
+    if (!canEdit) return
+    e.preventDefault()
+    setResizingCol(colIndex)
+    setStartX(e.clientX)
+    setStartWidth(columnWidths[colIndex] || DEFAULT_COLUMN_WIDTH)
+  }
+
+  const handleRowMouseDown = (e: React.MouseEvent, rowIndex: number) => {
+    if (!canEdit) return
+    e.preventDefault()
+    setResizingRow(rowIndex)
+    setStartY(e.clientY)
+    setStartHeight(rowHeights[rowIndex] || DEFAULT_ROW_HEIGHT)
+  }
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (resizingCol !== null) {
+        const diff = e.clientX - startX
+        const newWidth = Math.max(MIN_COLUMN_WIDTH, startWidth + diff)
+        const newWidths = [...columnWidths]
+        newWidths[resizingCol] = newWidth
+        setColumnWidths(newWidths)
+      }
+      if (resizingRow !== null) {
+        const diff = e.clientY - startY
+        const newHeight = Math.max(MIN_ROW_HEIGHT, startHeight + diff)
+        const newHeights = [...rowHeights]
+        newHeights[resizingRow] = newHeight
+        setRowHeights(newHeights)
+      }
+    }
+
+    const handleMouseUp = () => {
+      if (resizingCol !== null || resizingRow !== null) {
+        saveToHistory({
+          rows,
+          headers,
+          columnWidths,
+          rowHeights
+        })
+      }
+      setResizingCol(null)
+      setResizingRow(null)
+    }
+
+    if (resizingCol !== null || resizingRow !== null) {
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove)
+        document.removeEventListener('mouseup', handleMouseUp)
+      }
+    }
+  }, [resizingCol, resizingRow, startX, startY, startWidth, startHeight, columnWidths, rowHeights, rows, headers, saveToHistory])
+
+  const autoFormat = () => {
+    const newColWidths = headers.map((header, colIndex) => {
+      let maxWidth = String(header).length * 10 + 40
+      rows.forEach(row => {
+        const cellValue = String(row[colIndex] || '')
+        const cellWidth = cellValue.length * 10 + 20
+        if (cellWidth > maxWidth) {
+          maxWidth = Math.min(cellWidth, 400)
+        }
+      })
+      return Math.max(maxWidth, MIN_COLUMN_WIDTH)
+    })
+
+    const newRowHeights = rows.map((row, rowIndex) => {
+      let maxHeight = DEFAULT_ROW_HEIGHT
+      row.forEach((cell, colIndex) => {
+        const cellValue = String(cell || '')
+        const colWidth = newColWidths[colIndex] || DEFAULT_COLUMN_WIDTH
+        const charsPerLine = Math.floor(colWidth / 10)
+        if (cellValue.length > charsPerLine) {
+          const lines = Math.ceil(cellValue.length / charsPerLine)
+          maxHeight = Math.max(maxHeight, lines * 20 + 20)
+        }
+      })
+      return Math.max(maxHeight, MIN_ROW_HEIGHT)
+    })
+
+    setColumnWidths(newColWidths)
+    setRowHeights(newRowHeights)
+    
+    saveToHistory({
+      rows,
+      headers,
+      columnWidths: newColWidths,
+      rowHeights: newRowHeights
+    })
+  }
+
+  const resetFormat = () => {
+    const newColWidths = headers.map(() => DEFAULT_COLUMN_WIDTH)
+    const newRowHeights = rows.map(() => DEFAULT_ROW_HEIGHT)
+    
+    setColumnWidths(newColWidths)
+    setRowHeights(newRowHeights)
+    
+    saveToHistory({
+      rows,
+      headers,
+      columnWidths: newColWidths,
+      rowHeights: newRowHeights
+    })
   }
 
   const exportExcel = () => {
@@ -336,9 +582,43 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {canEdit && (
               <>
+                <div className="flex items-center gap-1 mr-2">
+                  <button
+                    onClick={undo}
+                    disabled={historyIndex <= 0}
+                    className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    title="撤销 (Ctrl+Z)"
+                  >
+                    <Undo2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={redo}
+                    disabled={historyIndex >= history.length - 1}
+                    className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    title="重做 (Ctrl+Y)"
+                  >
+                    <Redo2 className="w-4 h-4" />
+                  </button>
+                </div>
+                <button
+                  onClick={autoFormat}
+                  className="btn bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 shadow-lg shadow-purple-500/25"
+                  title="自动调整格式"
+                >
+                  <Wand2 className="w-4 h-4" />
+                  自动格式
+                </button>
+                <button
+                  onClick={resetFormat}
+                  className="btn btn-secondary"
+                  title="重置为默认格式"
+                >
+                  <Maximize2 className="w-4 h-4" />
+                  重置格式
+                </button>
                 <button
                   onClick={addRow}
                   className="btn btn-primary"
@@ -435,12 +715,12 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
 
       {headers.length > 0 ? (
         <div className="table-container">
-          <div className="overflow-x-auto max-h-[600px]">
-            <table className="w-full">
-              <thead className="table-header sticky top-0 z-10">
-                <tr>
+          <div className="overflow-auto max-h-[600px]" style={{ maxWidth: '100%' }}>
+            <table className="w-full border-collapse" ref={tableRef} style={{ tableLayout: 'fixed' }}>
+              <thead className="sticky top-0 z-10">
+                <tr className="bg-gradient-to-r from-gray-50 to-gray-100">
                   {canEdit && (
-                    <th className="table-cell w-12">
+                    <th className="w-12 min-w-[48px] border-b border-r border-gray-200 px-2 py-2 bg-gray-50">
                       <input
                         type="checkbox"
                         checked={selectedRows.size === filteredRows.length && filteredRows.length > 0}
@@ -449,24 +729,43 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                       />
                     </th>
                   )}
-                  <th className="table-cell font-semibold text-gray-600 w-16">
+                  <th className="w-16 min-w-[64px] border-b border-r border-gray-200 px-2 py-2 bg-gray-50 font-semibold text-gray-600">
                     #
                   </th>
                   {headers.map((header, index) => (
                     <th
                       key={index}
-                      className="table-cell font-semibold text-gray-600"
+                      className="border-b border-r border-gray-200 px-3 py-2 bg-gray-50 font-semibold text-gray-600 relative select-none"
+                      style={{ 
+                        width: columnWidths[index] || DEFAULT_COLUMN_WIDTH,
+                        minWidth: MIN_COLUMN_WIDTH
+                      }}
                     >
-                      {header}
+                      <div className="truncate">{header}</div>
+                      {canEdit && (
+                        <div
+                          className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 transition-colors group"
+                          onMouseDown={(e) => handleColMouseDown(e, index)}
+                        >
+                          <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-blue-400 opacity-0 group-hover:opacity-100 transition-opacity rounded" />
+                        </div>
+                      )}
                     </th>
                   ))}
+                  <th className="w-8 min-w-[32px] border-b border-gray-200 bg-gray-50" />
                 </tr>
               </thead>
               <tbody>
                 {filteredRows.map((row, rowIndex) => (
-                  <tr key={rowIndex} className={`table-row ${selectedRows.has(rowIndex) ? 'bg-blue-50' : ''}`}>
+                  <tr 
+                    key={rowIndex} 
+                    className={`border-b border-gray-100 transition-colors ${
+                      selectedRows.has(rowIndex) ? 'bg-blue-50' : 'hover:bg-gray-50'
+                    } ${resizingRow === rowIndex ? 'bg-blue-100' : ''}`}
+                    style={{ height: rowHeights[rowIndex] || DEFAULT_ROW_HEIGHT }}
+                  >
                     {canEdit && (
-                      <td className="table-cell">
+                      <td className="border-r border-gray-200 px-2 py-2 text-center bg-gray-50/50">
                         <input
                           type="checkbox"
                           checked={selectedRows.has(rowIndex)}
@@ -475,24 +774,28 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                         />
                       </td>
                     )}
-                    <td className="table-cell text-gray-400 font-medium">
+                    <td className="border-r border-gray-200 px-2 py-2 text-gray-400 font-medium text-center bg-gray-50/50">
                       {rowIndex + 1}
                     </td>
                     {row.map((cell, colIndex) => (
                       <td
                         key={colIndex}
-                        className="table-cell"
+                        className="border-r border-gray-200 px-3 py-2 relative"
+                        style={{ 
+                          width: columnWidths[colIndex] || DEFAULT_COLUMN_WIDTH,
+                          minWidth: MIN_COLUMN_WIDTH
+                        }}
                         onClick={() => startEdit(rowIndex, colIndex, cell)}
                       >
                         {editingCell?.row === rowIndex && editingCell?.col === colIndex ? (
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1 absolute inset-0 bg-white z-10 p-1 shadow-lg border border-blue-300 rounded">
                             <input
                               type="text"
                               value={editValue}
                               onChange={(e) => setEditValue(e.target.value)}
                               onKeyDown={handleKeyDown}
                               autoFocus
-                              className="w-full px-2 py-1 border border-blue-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-sm"
+                              className="flex-1 px-2 py-1 border-0 focus:outline-none text-sm"
                             />
                             <button
                               onClick={(e) => { e.stopPropagation(); saveEdit(); }}
@@ -508,16 +811,35 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                             </button>
                           </div>
                         ) : (
-                          <span className={`inline-block px-2 py-1 rounded transition-colors ${
-                            canEdit 
-                              ? 'cursor-pointer hover:bg-amber-50 hover:text-amber-700' 
-                              : 'cursor-default'
-                          }`}>
+                          <div 
+                            className={`text-sm overflow-hidden transition-colors ${
+                              canEdit 
+                                ? 'cursor-pointer hover:bg-amber-50 hover:text-amber-700 rounded px-1' 
+                                : 'cursor-default'
+                            }`}
+                            style={{ 
+                              maxHeight: (rowHeights[rowIndex] || DEFAULT_ROW_HEIGHT) - 16,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap'
+                            }}
+                            title={String(cell || '')}
+                          >
                             {(cell !== null && cell !== undefined && cell !== '') ? cell : '-'}
-                          </span>
+                          </div>
                         )}
                       </td>
                     ))}
+                    <td className="relative">
+                      {canEdit && (
+                        <div
+                          className="absolute left-0 right-0 bottom-0 h-1 cursor-row-resize hover:bg-blue-400 transition-colors group"
+                          onMouseDown={(e) => handleRowMouseDown(e, rowIndex)}
+                        >
+                          <div className="absolute left-1/2 -translate-x-1/2 bottom-0 w-8 h-1 bg-blue-400 opacity-0 group-hover:opacity-100 transition-opacity rounded" />
+                        </div>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -551,9 +873,11 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
               {canEdit && (
                 <>
                   <span>点击单元格 - 编辑内容</span>
-                  <span>Enter - 保存编辑</span>
-                  <span>Escape - 取消编辑</span>
-                  <span>复选框 - 批量删除</span>
+                  <span>拖动列边界 - 调整列宽</span>
+                  <span>拖动行底部 - 调整行高</span>
+                  <span>Ctrl+Z - 撤销</span>
+                  <span>Ctrl+Y / Ctrl+Shift+Z - 重做</span>
+                  <span className="text-purple-600 font-medium">自动格式 - 智能调整列宽行高</span>
                 </>
               )}
               {isAdmin && <span className="text-purple-600 font-medium">管理员可控制文件共享状态</span>}
