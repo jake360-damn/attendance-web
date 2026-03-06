@@ -1132,7 +1132,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                   </td>
                 </tr>
                 {/* 冻结行 - 始终显示原始数据（不受搜索影响） */}
-                {searchTerm === '' && frozenRows > 0 && rows.slice(0, frozenRows).map((row, index) => {
+                {frozenRows > 0 && rows.slice(0, frozenRows).map((row, index) => {
                   const rowIndex = index + 1
                   const rowStyle = getRowStyle(rowIndex)
                   
