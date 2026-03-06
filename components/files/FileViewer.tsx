@@ -46,6 +46,36 @@ const DEFAULT_ROW_HEIGHT = 40
 const MIN_COLUMN_WIDTH = 50
 const MIN_ROW_HEIGHT = 24
 
+function calculateAutoFormat(headers: string[], rows: any[][]) {
+  const columnWidths = headers.map((header, colIndex) => {
+    let maxWidth = String(header).length * 10 + 40
+    rows.forEach(row => {
+      const cellValue = String(row[colIndex] || '')
+      const cellWidth = cellValue.length * 10 + 20
+      if (cellWidth > maxWidth) {
+        maxWidth = Math.min(cellWidth, 400)
+      }
+    })
+    return Math.max(maxWidth, MIN_COLUMN_WIDTH)
+  })
+
+  const rowHeights = rows.map((row, rowIndex) => {
+    let maxHeight = DEFAULT_ROW_HEIGHT
+    row.forEach((cell, colIndex) => {
+      const cellValue = String(cell || '')
+      const colWidth = columnWidths[colIndex] || DEFAULT_COLUMN_WIDTH
+      const charsPerLine = Math.floor(colWidth / 10)
+      if (cellValue.length > charsPerLine) {
+        const lines = Math.ceil(cellValue.length / charsPerLine)
+        maxHeight = Math.max(maxHeight, lines * 20 + 20)
+      }
+    })
+    return Math.max(maxHeight, MIN_ROW_HEIGHT)
+  })
+
+  return { columnWidths, rowHeights }
+}
+
 export default function FileViewer({ file, currentUser, onBack, onViewHistory }: FileViewerProps) {
   const [headers, setHeaders] = useState<string[]>([])
   const [rows, setRows] = useState<any[][]>([])
@@ -134,8 +164,15 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
       if (rawData && !rawError) {
         const loadedHeaders = rawData.headers || []
         const loadedRows = rawData.rows || []
-        const loadedColWidths = rawData.column_widths || loadedHeaders.map(() => DEFAULT_COLUMN_WIDTH)
-        const loadedRowHeights = rawData.row_heights || loadedRows.map(() => DEFAULT_ROW_HEIGHT)
+        
+        let loadedColWidths = rawData.column_widths
+        let loadedRowHeights = rawData.row_heights
+        
+        if (!loadedColWidths || !loadedRowHeights) {
+          const autoFormat = calculateAutoFormat(loadedHeaders, loadedRows)
+          loadedColWidths = autoFormat.columnWidths
+          loadedRowHeights = autoFormat.rowHeights
+        }
         
         setHeaders(loadedHeaders)
         setRows(loadedRows)
@@ -170,16 +207,19 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
             record.status || '',
             record.notes || '',
           ])
+          
+          const autoFormat = calculateAutoFormat(recordHeaders, recordRows)
+          
           setHeaders(recordHeaders)
           setRows(recordRows)
-          setColumnWidths(recordHeaders.map(() => DEFAULT_COLUMN_WIDTH))
-          setRowHeights(recordRows.map(() => DEFAULT_ROW_HEIGHT))
+          setColumnWidths(autoFormat.columnWidths)
+          setRowHeights(autoFormat.rowHeights)
           
           const initialState: HistoryState = {
             rows: recordRows,
             headers: recordHeaders,
-            columnWidths: recordHeaders.map(() => DEFAULT_COLUMN_WIDTH),
-            rowHeights: recordRows.map(() => DEFAULT_ROW_HEIGHT)
+            columnWidths: autoFormat.columnWidths,
+            rowHeights: autoFormat.rowHeights
           }
           setHistory([initialState])
           setHistoryIndex(0)
