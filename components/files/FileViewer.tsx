@@ -1030,19 +1030,75 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
           <div className="overflow-auto max-h-[600px]" style={{ maxWidth: '100%' }}>
             <table className="w-full border-collapse" ref={tableRef} style={{ tableLayout: 'fixed' }}>
               <tbody>
-                {allData.map((row, rowIndex) => {
+                {/* 表头行 - 始终显示 */}
+                <tr 
+                  className="border-b border-gray-100 transition-colors bg-gradient-to-r from-gray-50 to-gray-100"
+                  style={{ height: rowHeights[0] || DEFAULT_ROW_HEIGHT }}
+                >
+                  {canEdit && (
+                    <td className="border-r border-gray-200 px-2 py-2 text-center bg-gray-50/50">
+                      <input
+                        type="checkbox"
+                        checked={selectedRows.size === filteredRows.length && filteredRows.length > 0}
+                        onChange={toggleSelectAll}
+                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                    </td>
+                  )}
+                  <td className="border-r border-gray-200 px-2 py-2 text-gray-400 font-medium text-center bg-gray-50/50">
+                    #
+                  </td>
+                  {headers.map((cell, colIndex) => {
+                    const mergeInfo = getCellMergeInfo(0, colIndex)
+                    if (mergeInfo.shouldHide) return null
+                    return (
+                      <th
+                        key={colIndex}
+                        className={`border-r border-gray-200 px-3 py-2 relative select-none bg-gray-50 font-semibold text-gray-600 ${
+                          mergeInfo.isMerged ? 'bg-blue-50/50' : ''
+                        }`}
+                        style={{ 
+                          width: mergeInfo.isMerged && mergeInfo.colSpan > 1
+                            ? columnWidths.slice(colIndex, colIndex + mergeInfo.colSpan).reduce((a, b) => a + b, 0)
+                            : (columnWidths[colIndex] || DEFAULT_COLUMN_WIDTH),
+                          minWidth: MIN_COLUMN_WIDTH
+                        }}
+                        rowSpan={mergeInfo.rowSpan > 1 ? mergeInfo.rowSpan : undefined}
+                        colSpan={mergeInfo.colSpan > 1 ? mergeInfo.colSpan : undefined}
+                      >
+                        {canEdit && !mergeInfo.shouldHide && (
+                          <div
+                            className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-blue-500 transition-colors z-20"
+                            onMouseDown={(e) => {
+                              e.stopPropagation()
+                              handleColMouseDown(e, colIndex)
+                            }}
+                            title="拖动调整列宽"
+                          />
+                        )}
+                        <div className="text-sm overflow-hidden text-center">
+                          {cell || '-'}
+                        </div>
+                      </th>
+                    )
+                  })}
+                  <td className="relative"></td>
+                </tr>
+                {/* 数据行 - 根据搜索过滤 */}
+                {filteredRows.map((row, filteredIndex) => {
+                  const originalIndex = rows.indexOf(row)
+                  const rowIndex = originalIndex + 1
                   const isFrozen = isRowFrozen(rowIndex)
                   const rowStyle = getRowStyle(rowIndex)
-                  const isHeaderRow = rowIndex === 0
                   
                   return (
                     <tr 
-                      key={rowIndex} 
+                      key={filteredIndex} 
                       className={`border-b border-gray-100 transition-colors ${
-                        selectedRows.has(rowIndex) ? 'bg-blue-50' : 'hover:bg-gray-50'
+                        selectedRows.has(originalIndex) ? 'bg-blue-50' : 'hover:bg-gray-50'
                       } ${resizingRow === rowIndex ? 'bg-blue-100' : ''} ${
                         isFrozen ? 'bg-gray-50' : ''
-                      } ${isHeaderRow ? 'bg-gradient-to-r from-gray-50 to-gray-100' : ''}`}
+                      }`}
                       style={{ 
                         height: rowHeights[rowIndex] || DEFAULT_ROW_HEIGHT,
                         ...rowStyle
@@ -1050,25 +1106,16 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                     >
                       {canEdit && (
                         <td className="border-r border-gray-200 px-2 py-2 text-center bg-gray-50/50">
-                          {isHeaderRow ? (
-                            <input
-                              type="checkbox"
-                              checked={selectedRows.size === filteredRows.length && filteredRows.length > 0}
-                              onChange={toggleSelectAll}
-                              className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                            />
-                          ) : (
-                            <input
-                              type="checkbox"
-                              checked={selectedRows.has(rowIndex - 1)}
-                              onChange={() => toggleRowSelection(rowIndex - 1)}
-                              className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                            />
-                          )}
+                          <input
+                            type="checkbox"
+                            checked={selectedRows.has(originalIndex)}
+                            onChange={() => toggleRowSelection(originalIndex)}
+                            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
                         </td>
                       )}
                       <td className={`border-r border-gray-200 px-2 py-2 text-gray-400 font-medium text-center ${isFrozen ? 'bg-gray-100' : 'bg-gray-50/50'}`}>
-                        {rowIndex + 1}
+                        {filteredIndex + 1}
                       </td>
                       {row.map((cell, colIndex) => {
                         const mergeInfo = getCellMergeInfo(rowIndex, colIndex)
@@ -1078,16 +1125,14 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                           return null
                         }
                         
-                        const CellTag = isHeaderRow ? 'th' : 'td'
-                        
                         return (
-                          <CellTag
+                          <td
                             key={colIndex}
                             className={`border-r border-gray-200 px-3 py-2 relative select-none ${
                               mergeInfo.isMerged ? 'bg-blue-50/50' : ''
                             } ${isSelected ? 'bg-blue-100 ring-2 ring-blue-400 ring-inset' : ''} ${
                               isFrozen ? 'bg-gray-50' : ''
-                            } ${isHeaderRow ? 'bg-gray-50 font-semibold text-gray-600' : ''}`}
+                            }`}
                             style={{ 
                               width: mergeInfo.isMerged && mergeInfo.colSpan > 1
                                 ? columnWidths.slice(colIndex, colIndex + mergeInfo.colSpan).reduce((a, b) => a + b, 0)
@@ -1101,16 +1146,6 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                             onMouseUp={handleCellMouseUp}
                             onDoubleClick={() => startEdit(rowIndex, colIndex, cell)}
                           >
-                            {canEdit && isHeaderRow && !mergeInfo.shouldHide && (
-                              <div
-                                className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-blue-500 transition-colors z-20"
-                                onMouseDown={(e) => {
-                                  e.stopPropagation()
-                                  handleColMouseDown(e, colIndex)
-                                }}
-                                title="拖动调整列宽"
-                              />
-                            )}
                             {editingCell?.row === rowIndex && editingCell?.col === colIndex ? (
                               <div className="flex items-center gap-1 absolute inset-0 bg-white z-10 p-1 shadow-lg border border-blue-300 rounded">
                                 <input
@@ -1137,10 +1172,10 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                             ) : (
                               <div 
                                 className={`text-sm overflow-hidden transition-colors ${
-                                  canEdit && !isHeaderRow
+                                  canEdit
                                     ? 'cursor-pointer hover:bg-amber-50 hover:text-amber-700 rounded px-1' 
                                     : 'cursor-default'
-                                } ${mergeInfo.isMerged ? 'font-medium text-blue-800' : ''} ${isHeaderRow ? 'text-center' : ''}`}
+                                } ${mergeInfo.isMerged ? 'font-medium text-blue-800' : ''}`}
                                 style={{ 
                                   maxHeight: mergeInfo.isMerged && mergeInfo.rowSpan > 1 
                                     ? (rowHeights.slice(rowIndex, rowIndex + mergeInfo.rowSpan).reduce((a, b) => a + b, 0)) 
@@ -1154,7 +1189,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                                 {(cell !== null && cell !== undefined && cell !== '') ? cell : '-'}
                               </div>
                             )}
-                          </CellTag>
+                          </td>
                         )
                       })}
                       <td className="relative">
