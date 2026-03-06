@@ -189,6 +189,9 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
         const loadedHeaderMerges: MergeRange[] = rawData.header_merges || []
         const loadedFrozenRows = rawData.frozen_rows || 0
         
+        console.log('FileViewer loaded - headerMerges:', loadedHeaderMerges)
+        console.log('FileViewer loaded - merges:', loadedMerges)
+        
         if (!loadedColWidths || !loadedRowHeights) {
           const autoFormat = calculateAutoFormat(loadedHeaders, loadedRows)
           loadedColWidths = autoFormat.columnWidths
@@ -1080,14 +1083,15 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                     return (
                       <th
                         key={index}
-                        className="border-b border-r border-gray-200 px-3 py-2 bg-gray-50 font-semibold text-gray-600 relative select-none"
+                        className={`border-b border-r border-gray-200 px-3 py-2 bg-gray-50 font-semibold text-gray-600 relative select-none ${
+                          headerMergeInfo.isMerged ? 'bg-blue-100 text-blue-800 border-blue-300' : ''
+                        }`}
                         style={{ 
                           width: headerMergeInfo.isMerged 
                             ? columnWidths.slice(index, index + headerMergeInfo.colSpan).reduce((a, b) => a + b, 0)
                             : (columnWidths[index] || DEFAULT_COLUMN_WIDTH),
                           minWidth: MIN_COLUMN_WIDTH
                         }}
-                        colSpan={headerMergeInfo.colSpan > 1 ? headerMergeInfo.colSpan : undefined}
                       >
                         <div className="truncate text-center">{header}</div>
                         {canEdit && (
