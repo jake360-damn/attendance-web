@@ -8,6 +8,15 @@ interface ExcelUploaderProps {
   onUpload: (data: any) => void
 }
 
+interface MergeRange {
+  s: { r: number; c: number }
+  e: { r: number; c: number }
+}
+
+interface ExcelUploaderProps {
+  onUpload: (data: any) => void
+}
+
 export default function ExcelUploader({ onUpload }: ExcelUploaderProps) {
   const [error, setError] = useState('')
   const [uploading, setUploading] = useState(false)
@@ -35,11 +44,14 @@ export default function ExcelUploader({ onUpload }: ExcelUploaderProps) {
         const headers = jsonData[0] as string[]
         const rows = jsonData.slice(1) as any[]
 
+        const merges: MergeRange[] = worksheet['!merges'] || []
+
         onUpload({
           headers,
           rows,
           fileName: file.name,
           fileSize: file.size,
+          merges,
         })
       } catch (err) {
         setError('解析文件失败，请检查文件格式')

@@ -18,12 +18,18 @@ import {
   Edit3
 } from 'lucide-react'
 
+interface MergeRange {
+  s: { r: number; c: number }
+  e: { r: number; c: number }
+}
+
 interface ExcelEditorProps {
   data: {
     headers: string[]
     rows: any[][]
     fileName: string
     fileSize: number
+    merges?: MergeRange[]
   }
   onBack: () => void
   userId: string
@@ -201,6 +207,7 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
           rows: rows,
           column_widths: columnWidths,
           row_heights: rowHeights,
+          merges: data.merges || null,
         } as any)
 
       if (rawDataError) {
