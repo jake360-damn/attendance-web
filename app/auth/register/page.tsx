@@ -101,7 +101,8 @@ export default function RegisterPage() {
   }, [])
 
   const initVanta = () => {
-    if (!vantaRef.current || !window.VANTA || !window.THREE) return
+    if (!vantaRef.current) return false
+    if (!window.VANTA || !window.THREE) return false
     
     if (vantaEffectRef.current) {
       vantaEffectRef.current.destroy()
@@ -127,12 +128,30 @@ export default function RegisterPage() {
       cohesion: 20.00,
       quantity: 5.00
     })
+    return true
   }
 
   useEffect(() => {
-    if (window.VANTA && window.THREE) {
-      initVanta()
+    const tryInitVanta = () => {
+      if (initVanta()) return
+      
+      const checkInterval = setInterval(() => {
+        if (initVanta()) {
+          clearInterval(checkInterval)
+        }
+      }, 100)
+      
+      const timeout = setTimeout(() => {
+        clearInterval(checkInterval)
+      }, 3000)
+      
+      return () => {
+        clearInterval(checkInterval)
+        clearTimeout(timeout)
+      }
     }
+    
+    tryInitVanta()
     
     return () => {
       if (vantaEffectRef.current) {
