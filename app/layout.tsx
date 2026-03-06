@@ -27,18 +27,22 @@ export default function RootLayout({
     <html lang="zh-CN">
       <head>
         <Script 
+          id="three-js"
           src="/three.min.js" 
           strategy="beforeInteractive"
         />
         <Script 
+          id="p5-js"
           src="/p5.min.js" 
           strategy="beforeInteractive"
         />
         <Script 
+          id="vanta-birds"
           src="/vanta.birds.min.js" 
           strategy="beforeInteractive"
         />
         <Script 
+          id="vanta-topology"
           src="/vanta.topology.min.js" 
           strategy="beforeInteractive"
         />

@@ -95,33 +95,45 @@ export default function DashboardPage() {
     
     const initVanta = () => {
       if (!vantaRefCurrent) return
-      if (!window.VANTA || !window.p5) return
+      if (!window.VANTA?.TOPOLOGY || !window.p5) {
+        console.log('VANTA or p5 not ready:', {
+          VANTA: !!window.VANTA,
+          TOPOLOGY: !!window.VANTA?.TOPOLOGY,
+          p5: !!window.p5
+        })
+        return
+      }
       
       if (vantaEffectRef.current) {
         vantaEffectRef.current.destroy()
       }
       
-      vantaEffectRef.current = window.VANTA.TOPOLOGY({
-        el: vantaRefCurrent,
-        mouseControls: true,
-        touchControls: true,
-        gyroControls: false,
-        minHeight: 200.00,
-        minWidth: 200.00,
-        scale: 1.00,
-        scaleMobile: 1.00,
-        color: 0x3f82ff,
-        backgroundColor: 0xf8fafc
-      })
+      try {
+        vantaEffectRef.current = window.VANTA.TOPOLOGY({
+          el: vantaRefCurrent,
+          mouseControls: true,
+          touchControls: true,
+          gyroControls: false,
+          minHeight: 200.00,
+          minWidth: 200.00,
+          scale: 1.00,
+          scaleMobile: 1.00,
+          color: 0x3f82ff,
+          backgroundColor: 0xf8fafc
+        })
+        console.log('VANTA TOPOLOGY initialized successfully')
+      } catch (error) {
+        console.error('Failed to initialize VANTA TOPOLOGY:', error)
+      }
     }
     
-    if (window.VANTA && window.p5 && vantaRefCurrent) {
+    if (window.VANTA?.TOPOLOGY && window.p5 && vantaRefCurrent) {
       initVanta()
       return
     }
     
     const checkLoaded = setInterval(() => {
-      if (window.VANTA && window.p5 && vantaRefCurrent) {
+      if (window.VANTA?.TOPOLOGY && window.p5 && vantaRefCurrent) {
         initVanta()
         clearInterval(checkLoaded)
       }
