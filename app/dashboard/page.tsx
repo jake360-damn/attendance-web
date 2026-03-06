@@ -95,45 +95,33 @@ export default function DashboardPage() {
     
     const initVanta = () => {
       if (!vantaRefCurrent) return
-      if (!window.VANTA?.TOPOLOGY || !window.p5) {
-        console.log('VANTA or p5 not ready:', {
-          VANTA: !!window.VANTA,
-          TOPOLOGY: !!window.VANTA?.TOPOLOGY,
-          p5: !!window.p5
-        })
-        return
-      }
+      if (!window.VANTA || !window.p5) return
       
       if (vantaEffectRef.current) {
         vantaEffectRef.current.destroy()
       }
       
-      try {
-        vantaEffectRef.current = window.VANTA.TOPOLOGY({
-          el: vantaRefCurrent,
-          mouseControls: true,
-          touchControls: true,
-          gyroControls: false,
-          minHeight: 200.00,
-          minWidth: 200.00,
-          scale: 1.00,
-          scaleMobile: 1.00,
-          color: 0x3f82ff,
-          backgroundColor: 0xf8fafc
-        })
-        console.log('VANTA TOPOLOGY initialized successfully')
-      } catch (error) {
-        console.error('Failed to initialize VANTA TOPOLOGY:', error)
-      }
+      vantaEffectRef.current = window.VANTA.TOPOLOGY({
+        el: vantaRefCurrent,
+        mouseControls: true,
+        touchControls: true,
+        gyroControls: false,
+        minHeight: 200.00,
+        minWidth: 200.00,
+        scale: 1.00,
+        scaleMobile: 1.00,
+        color: 0x3f82ff,
+        backgroundColor: 0xf8fafc
+      })
     }
     
-    if (window.VANTA?.TOPOLOGY && window.p5 && vantaRefCurrent) {
+    if (window.VANTA && window.p5 && vantaRefCurrent) {
       initVanta()
       return
     }
     
     const checkLoaded = setInterval(() => {
-      if (window.VANTA?.TOPOLOGY && window.p5 && vantaRefCurrent) {
+      if (window.VANTA && window.p5 && vantaRefCurrent) {
         initVanta()
         clearInterval(checkLoaded)
       }
@@ -197,11 +185,8 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen relative">
-      <div 
-        ref={vantaRef} 
-        className="fixed inset-0 w-full h-full"
-        style={{ zIndex: 0 }}
-      />
+      <div ref={vantaRef} className="fixed inset-0 z-0" />
+      
       <div className="relative z-10">
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-200/50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
