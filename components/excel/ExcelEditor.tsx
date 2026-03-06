@@ -29,6 +29,41 @@ interface ExcelEditorProps {
   userId: string
 }
 
+const DEFAULT_COLUMN_WIDTH = 150
+const DEFAULT_ROW_HEIGHT = 40
+const MIN_COLUMN_WIDTH = 50
+const MIN_ROW_HEIGHT = 24
+
+function calculateAutoFormat(headers: string[], rows: any[][]) {
+  const columnWidths = headers.map((header, colIndex) => {
+    let maxWidth = String(header).length * 10 + 40
+    rows.forEach(row => {
+      const cellValue = String(row[colIndex] || '')
+      const cellWidth = cellValue.length * 10 + 20
+      if (cellWidth > maxWidth) {
+        maxWidth = Math.min(cellWidth, 400)
+      }
+    })
+    return Math.max(maxWidth, MIN_COLUMN_WIDTH)
+  })
+
+  const rowHeights = rows.map((row, rowIndex) => {
+    let maxHeight = DEFAULT_ROW_HEIGHT
+    row.forEach((cell, colIndex) => {
+      const cellValue = String(cell || '')
+      const colWidth = columnWidths[colIndex] || DEFAULT_COLUMN_WIDTH
+      const charsPerLine = Math.floor(colWidth / 10)
+      if (cellValue.length > charsPerLine) {
+        const lines = Math.ceil(cellValue.length / charsPerLine)
+        maxHeight = Math.max(maxHeight, lines * 20 + 20)
+      }
+    })
+    return Math.max(maxHeight, MIN_ROW_HEIGHT)
+  })
+
+  return { columnWidths, rowHeights }
+}
+
 export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) {
   const [headers, setHeaders] = useState<string[]>(data.headers)
   const [rows, setRows] = useState<any[][]>(data.rows)
@@ -156,12 +191,16 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
 
       const fileId = (fileData as any).id
 
+      const { columnWidths, rowHeights } = calculateAutoFormat(headers, rows)
+
       const { error: rawDataError } = await supabase
         .from('excel_data_raw')
         .insert({
           file_id: fileId,
           headers: headers,
           rows: rows,
+          column_widths: columnWidths,
+          row_heights: rowHeights,
         } as any)
 
       if (rawDataError) {
