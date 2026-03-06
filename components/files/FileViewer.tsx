@@ -26,7 +26,8 @@ import {
   Wand2,
   Maximize2,
   Merge,
-  Split
+  Split,
+  Snowflake
 } from 'lucide-react'
 
 interface MergeRange {
@@ -104,6 +105,8 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
   const [columnWidths, setColumnWidths] = useState<number[]>([])
   const [rowHeights, setRowHeights] = useState<number[]>([])
   const [merges, setMerges] = useState<MergeRange[]>([])
+  const [frozenRows, setFrozenRows] = useState<number>(0)
+  const [showFreezeDialog, setShowFreezeDialog] = useState(false)
   const [resizingCol, setResizingCol] = useState<number | null>(null)
   const [resizingRow, setResizingRow] = useState<number | null>(null)
   const [startX, setStartX] = useState(0)
@@ -182,6 +185,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
         let loadedColWidths = rawData.column_widths
         let loadedRowHeights = rawData.row_heights
         const loadedMerges: MergeRange[] = rawData.merges || []
+        const loadedFrozenRows = rawData.frozen_rows || 0
         
         if (!loadedColWidths || !loadedRowHeights) {
           const autoFormat = calculateAutoFormat(loadedHeaders, loadedRows)
@@ -195,6 +199,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
         setColumnWidths(loadedColWidths)
         setRowHeights(loadedRowHeights)
         setMerges(loadedMerges)
+        setFrozenRows(loadedFrozenRows)
         
         const initialState: HistoryState = {
           rows: loadedRows,
@@ -415,6 +420,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
           row_heights: rowHeights,
           column_widths: columnWidths,
           merges: merges,
+          frozen_rows: frozenRows,
           updated_at: new Date().toISOString()
         })
         .eq('id', rawDataId)
@@ -742,6 +748,27 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
     return () => document.removeEventListener('mouseup', handleGlobalMouseUp)
   }, [])
 
+  const getFrozenRowHeight = () => {
+    if (frozenRows === 0) return 0
+    return rowHeights.slice(0, frozenRows).reduce((a, b) => a + b, 0)
+  }
+
+  const isRowFrozen = (rowIndex: number) => {
+    return rowIndex < frozenRows
+  }
+
+  const getRowStyle = (rowIndex: number) => {
+    if (frozenRows === 0 || rowIndex >= frozenRows) return {}
+    
+    const topOffset = rowHeights.slice(0, rowIndex).reduce((a, b) => a + b, 0)
+    return {
+      position: 'sticky' as const,
+      top: topOffset,
+      zIndex: 5,
+      backgroundColor: '#f9fafb'
+    }
+  }
+
   const exportExcel = () => {
     const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows])
     
@@ -878,6 +905,19 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                   <Split className="w-4 h-4" />
                   取消合并
                 </button>
+                {isAdmin && (
+                  <>
+                    <div className="h-6 w-px bg-gray-200 mx-1" />
+                    <button
+                      onClick={() => setShowFreezeDialog(true)}
+                      className={`btn ${frozenRows > 0 ? 'bg-blue-100 text-blue-700 border-blue-300' : 'btn-secondary'}`}
+                      title="设置冻结行数"
+                    >
+                      <Snowflake className="w-4 h-4" />
+                      {frozenRows > 0 ? `冻结 ${frozenRows} 行` : '冻结行'}
+                    </button>
+                  </>
+                )}
                 <div className="h-6 w-px bg-gray-200 mx-1" />
                 <button
                   onClick={addRow}
@@ -977,8 +1017,11 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
         <div className="table-container">
           <div className="overflow-auto max-h-[600px]" style={{ maxWidth: '100%' }}>
             <table className="w-full border-collapse" ref={tableRef} style={{ tableLayout: 'fixed' }}>
-              <thead className="sticky top-0 z-10">
-                <tr className="bg-gradient-to-r from-gray-50 to-gray-100">
+              <tbody>
+                <tr 
+                  className="bg-gradient-to-r from-gray-50 to-gray-100"
+                  style={frozenRows > 0 ? { position: 'sticky', top: 0, zIndex: 10 } : {}}
+                >
                   {canEdit && (
                     <th className="w-12 min-w-[48px] border-b border-r border-gray-200 px-2 py-2 bg-gray-50">
                       <input
@@ -1014,112 +1057,122 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                   ))}
                   <th className="w-8 min-w-[32px] border-b border-gray-200 bg-gray-50" />
                 </tr>
-              </thead>
-              <tbody>
-                {filteredRows.map((row, rowIndex) => (
-                  <tr 
-                    key={rowIndex} 
-                    className={`border-b border-gray-100 transition-colors ${
-                      selectedRows.has(rowIndex) ? 'bg-blue-50' : 'hover:bg-gray-50'
-                    } ${resizingRow === rowIndex ? 'bg-blue-100' : ''}`}
-                    style={{ height: rowHeights[rowIndex] || DEFAULT_ROW_HEIGHT }}
-                  >
-                    {canEdit && (
-                      <td className="border-r border-gray-200 px-2 py-2 text-center bg-gray-50/50">
-                        <input
-                          type="checkbox"
-                          checked={selectedRows.has(rowIndex)}
-                          onChange={() => toggleRowSelection(rowIndex)}
-                          className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                        />
-                      </td>
-                    )}
-                    <td className="border-r border-gray-200 px-2 py-2 text-gray-400 font-medium text-center bg-gray-50/50">
-                      {rowIndex + 1}
-                    </td>
-                    {row.map((cell, colIndex) => {
-                      const mergeInfo = getCellMergeInfo(rowIndex, colIndex)
-                      const isSelected = selectedCells.has(`${rowIndex},${colIndex}`)
-                      
-                      if (mergeInfo.shouldHide) {
-                        return null
-                      }
-                      
-                      return (
-                        <td
-                          key={colIndex}
-                          className={`border-r border-gray-200 px-3 py-2 relative select-none ${
-                            mergeInfo.isMerged ? 'bg-blue-50/50' : ''
-                          } ${isSelected ? 'bg-blue-100 ring-2 ring-blue-400 ring-inset' : ''}`}
-                          style={{ 
-                            width: columnWidths[colIndex] || DEFAULT_COLUMN_WIDTH,
-                            minWidth: MIN_COLUMN_WIDTH
-                          }}
-                          rowSpan={mergeInfo.rowSpan > 1 ? mergeInfo.rowSpan : undefined}
-                          colSpan={mergeInfo.colSpan > 1 ? mergeInfo.colSpan : undefined}
-                          onMouseDown={(e) => handleCellMouseDown(rowIndex, colIndex, e)}
-                          onMouseEnter={() => handleCellMouseEnter(rowIndex, colIndex)}
-                          onMouseUp={handleCellMouseUp}
-                          onDoubleClick={() => startEdit(rowIndex, colIndex, cell)}
-                        >
-                          {editingCell?.row === rowIndex && editingCell?.col === colIndex ? (
-                            <div className="flex items-center gap-1 absolute inset-0 bg-white z-10 p-1 shadow-lg border border-blue-300 rounded">
-                              <input
-                                type="text"
-                                value={editValue}
-                                onChange={(e) => setEditValue(e.target.value)}
-                                onKeyDown={handleKeyDown}
-                                autoFocus
-                                className="flex-1 px-2 py-1 border-0 focus:outline-none text-sm"
-                              />
-                              <button
-                                onClick={(e) => { e.stopPropagation(); saveEdit(); }}
-                                className="p-1 text-green-600 hover:bg-green-50 rounded"
-                              >
-                                <Check className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); cancelEdit(); }}
-                                className="p-1 text-red-600 hover:bg-red-50 rounded"
-                              >
-                                <XIcon className="w-4 h-4" />
-                              </button>
-                            </div>
-                          ) : (
-                            <div 
-                              className={`text-sm overflow-hidden transition-colors ${
-                                canEdit 
-                                  ? 'cursor-pointer hover:bg-amber-50 hover:text-amber-700 rounded px-1' 
-                                  : 'cursor-default'
-                              } ${mergeInfo.isMerged ? 'font-medium text-blue-800' : ''}`}
-                              style={{ 
-                                maxHeight: mergeInfo.isMerged && mergeInfo.rowSpan > 1 
-                                  ? (rowHeights.slice(rowIndex, rowIndex + mergeInfo.rowSpan).reduce((a, b) => a + b, 0)) 
-                                  : (rowHeights[rowIndex] || DEFAULT_ROW_HEIGHT) - 16,
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap'
-                              }}
-                              title={String(cell || '')}
-                            >
-                              {(cell !== null && cell !== undefined && cell !== '') ? cell : '-'}
-                            </div>
-                          )}
-                        </td>
-                      )
-                    })}
-                    <td className="relative">
+                {filteredRows.map((row, rowIndex) => {
+                  const isFrozen = isRowFrozen(rowIndex)
+                  const rowStyle = getRowStyle(rowIndex)
+                  
+                  return (
+                    <tr 
+                      key={rowIndex} 
+                      className={`border-b border-gray-100 transition-colors ${
+                        selectedRows.has(rowIndex) ? 'bg-blue-50' : 'hover:bg-gray-50'
+                      } ${resizingRow === rowIndex ? 'bg-blue-100' : ''} ${
+                        isFrozen ? 'bg-gray-50' : ''
+                      }`}
+                      style={{ 
+                        height: rowHeights[rowIndex] || DEFAULT_ROW_HEIGHT,
+                        ...rowStyle
+                      }}
+                    >
                       {canEdit && (
-                        <div
-                          className="absolute left-0 right-0 bottom-0 h-1 cursor-row-resize hover:bg-blue-400 transition-colors group"
-                          onMouseDown={(e) => handleRowMouseDown(e, rowIndex)}
-                        >
-                          <div className="absolute left-1/2 -translate-x-1/2 bottom-0 w-8 h-1 bg-blue-400 opacity-0 group-hover:opacity-100 transition-opacity rounded" />
-                        </div>
+                        <td className="border-r border-gray-200 px-2 py-2 text-center bg-gray-50/50">
+                          <input
+                            type="checkbox"
+                            checked={selectedRows.has(rowIndex)}
+                            onChange={() => toggleRowSelection(rowIndex)}
+                            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                        </td>
                       )}
-                    </td>
-                  </tr>
-                ))}
+                      <td className={`border-r border-gray-200 px-2 py-2 text-gray-400 font-medium text-center ${isFrozen ? 'bg-gray-100' : 'bg-gray-50/50'}`}>
+                        {rowIndex + 1}
+                      </td>
+                      {row.map((cell, colIndex) => {
+                        const mergeInfo = getCellMergeInfo(rowIndex, colIndex)
+                        const isSelected = selectedCells.has(`${rowIndex},${colIndex}`)
+                        
+                        if (mergeInfo.shouldHide) {
+                          return null
+                        }
+                        
+                        return (
+                          <td
+                            key={colIndex}
+                            className={`border-r border-gray-200 px-3 py-2 relative select-none ${
+                              mergeInfo.isMerged ? 'bg-blue-50/50' : ''
+                            } ${isSelected ? 'bg-blue-100 ring-2 ring-blue-400 ring-inset' : ''} ${
+                              isFrozen ? 'bg-gray-50' : ''
+                            }`}
+                            style={{ 
+                              width: columnWidths[colIndex] || DEFAULT_COLUMN_WIDTH,
+                              minWidth: MIN_COLUMN_WIDTH
+                            }}
+                            rowSpan={mergeInfo.rowSpan > 1 ? mergeInfo.rowSpan : undefined}
+                            colSpan={mergeInfo.colSpan > 1 ? mergeInfo.colSpan : undefined}
+                            onMouseDown={(e) => handleCellMouseDown(rowIndex, colIndex, e)}
+                            onMouseEnter={() => handleCellMouseEnter(rowIndex, colIndex)}
+                            onMouseUp={handleCellMouseUp}
+                            onDoubleClick={() => startEdit(rowIndex, colIndex, cell)}
+                          >
+                            {editingCell?.row === rowIndex && editingCell?.col === colIndex ? (
+                              <div className="flex items-center gap-1 absolute inset-0 bg-white z-10 p-1 shadow-lg border border-blue-300 rounded">
+                                <input
+                                  type="text"
+                                  value={editValue}
+                                  onChange={(e) => setEditValue(e.target.value)}
+                                  onKeyDown={handleKeyDown}
+                                  autoFocus
+                                  className="flex-1 px-2 py-1 border-0 focus:outline-none text-sm"
+                                />
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); saveEdit(); }}
+                                  className="p-1 text-green-600 hover:bg-green-50 rounded"
+                                >
+                                  <Check className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); cancelEdit(); }}
+                                  className="p-1 text-red-600 hover:bg-red-50 rounded"
+                                >
+                                  <XIcon className="w-4 h-4" />
+                                </button>
+                              </div>
+                            ) : (
+                              <div 
+                                className={`text-sm overflow-hidden transition-colors ${
+                                  canEdit 
+                                    ? 'cursor-pointer hover:bg-amber-50 hover:text-amber-700 rounded px-1' 
+                                    : 'cursor-default'
+                                } ${mergeInfo.isMerged ? 'font-medium text-blue-800' : ''}`}
+                                style={{ 
+                                  maxHeight: mergeInfo.isMerged && mergeInfo.rowSpan > 1 
+                                    ? (rowHeights.slice(rowIndex, rowIndex + mergeInfo.rowSpan).reduce((a, b) => a + b, 0)) 
+                                    : (rowHeights[rowIndex] || DEFAULT_ROW_HEIGHT) - 16,
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap'
+                                }}
+                                title={String(cell || '')}
+                              >
+                                {(cell !== null && cell !== undefined && cell !== '') ? cell : '-'}
+                              </div>
+                            )}
+                          </td>
+                        )
+                      })}
+                      <td className="relative">
+                        {canEdit && (
+                          <div
+                            className="absolute left-0 right-0 bottom-0 h-1 cursor-row-resize hover:bg-blue-400 transition-colors group"
+                            onMouseDown={(e) => handleRowMouseDown(e, rowIndex)}
+                          >
+                            <div className="absolute left-1/2 -translate-x-1/2 bottom-0 w-8 h-1 bg-blue-400 opacity-0 group-hover:opacity-100 transition-opacity rounded" />
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
@@ -1166,6 +1219,59 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
           </div>
         </div>
       </div>
+
+      {showFreezeDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md animate-fade-in">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">设置冻结行数</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              冻结的行将在滚动时保持固定在顶部。表头行始终会显示。
+            </p>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  冻结行数（不含表头）
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max={rows.length}
+                  value={frozenRows}
+                  onChange={(e) => setFrozenRows(Math.max(0, Math.min(rows.length, parseInt(e.target.value) || 0)))}
+                  className="input w-full"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  当前将冻结 {frozenRows} 行数据（滚动时会固定在表头下方）
+                </p>
+              </div>
+              
+              {frozenRows > 0 && (
+                <div className="bg-blue-50 rounded-lg p-3">
+                  <p className="text-sm text-blue-700">
+                    <Snowflake className="w-4 h-4 inline mr-1" />
+                    冻结功能已启用，前 {frozenRows} 行数据将固定显示
+                  </p>
+                </div>
+              )}
+              
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setFrozenRows(0)}
+                  className="btn btn-secondary flex-1"
+                >
+                  取消冻结
+                </button>
+                <button
+                  onClick={() => setShowFreezeDialog(false)}
+                  className="btn btn-primary flex-1"
+                >
+                  确定
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
