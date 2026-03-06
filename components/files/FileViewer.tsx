@@ -105,6 +105,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
   const [columnWidths, setColumnWidths] = useState<number[]>([])
   const [rowHeights, setRowHeights] = useState<number[]>([])
   const [merges, setMerges] = useState<MergeRange[]>([])
+  const [headerMerges, setHeaderMerges] = useState<MergeRange[]>([])
   const [frozenRows, setFrozenRows] = useState<number>(0)
   const [showFreezeDialog, setShowFreezeDialog] = useState(false)
   const [resizingCol, setResizingCol] = useState<number | null>(null)
@@ -185,6 +186,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
         let loadedColWidths = rawData.column_widths
         let loadedRowHeights = rawData.row_heights
         const loadedMerges: MergeRange[] = rawData.merges || []
+        const loadedHeaderMerges: MergeRange[] = rawData.header_merges || []
         const loadedFrozenRows = rawData.frozen_rows || 0
         
         if (!loadedColWidths || !loadedRowHeights) {
@@ -199,6 +201,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
         setColumnWidths(loadedColWidths)
         setRowHeights(loadedRowHeights)
         setMerges(loadedMerges)
+        setHeaderMerges(loadedHeaderMerges)
         setFrozenRows(loadedFrozenRows)
         
         const initialState: HistoryState = {
@@ -420,6 +423,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
           row_heights: rowHeights,
           column_widths: columnWidths,
           merges: merges,
+          header_merges: headerMerges,
           frozen_rows: frozenRows,
           updated_at: new Date().toISOString()
         })
@@ -602,6 +606,22 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
     return { isMerged: false, isStart: false, rowSpan: 1, colSpan: 1, shouldHide: false }
   }
 
+  const getHeaderMergeInfo = (colIndex: number) => {
+    for (const merge of headerMerges) {
+      if (colIndex >= merge.s.c && colIndex <= merge.e.c) {
+        const isStart = colIndex === merge.s.c
+        const colSpan = merge.e.c - merge.s.c + 1
+        return {
+          isMerged: true,
+          isStart,
+          colSpan: isStart ? colSpan : 0,
+          shouldHide: !isStart
+        }
+      }
+    }
+    return { isMerged: false, isStart: false, colSpan: 1, shouldHide: false }
+  }
+
   const getSelectedCellRange = () => {
     if (selectedCells.size === 0) return null
     
@@ -772,12 +792,28 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
   const exportExcel = () => {
     const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows])
     
+    const allMerges: MergeRange[] = []
+    
+    if (headerMerges.length > 0) {
+      headerMerges.forEach(m => {
+        allMerges.push({
+          s: { r: 0, c: m.s.c },
+          e: { r: 0, c: m.e.c }
+        })
+      })
+    }
+    
     if (merges.length > 0) {
-      const adjustedMerges = merges.map(m => ({
-        s: { r: m.s.r + 1, c: m.s.c },
-        e: { r: m.e.r + 1, c: m.e.c }
-      }))
-      worksheet['!merges'] = adjustedMerges
+      merges.forEach(m => {
+        allMerges.push({
+          s: { r: m.s.r + 1, c: m.s.c },
+          e: { r: m.e.r + 1, c: m.e.c }
+        })
+      })
+    }
+    
+    if (allMerges.length > 0) {
+      worksheet['!merges'] = allMerges
     }
     
     const workbook = XLSX.utils.book_new()
@@ -1020,7 +1056,6 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
               <tbody>
                 <tr 
                   className="bg-gradient-to-r from-gray-50 to-gray-100"
-                  style={frozenRows > 0 ? { position: 'sticky', top: 0, zIndex: 10 } : {}}
                 >
                   {canEdit && (
                     <th className="w-12 min-w-[48px] border-b border-r border-gray-200 px-2 py-2 bg-gray-50">
@@ -1035,26 +1070,37 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                   <th className="w-16 min-w-[64px] border-b border-r border-gray-200 px-2 py-2 bg-gray-50 font-semibold text-gray-600">
                     #
                   </th>
-                  {headers.map((header, index) => (
-                    <th
-                      key={index}
-                      className="border-b border-r border-gray-200 px-3 py-2 bg-gray-50 font-semibold text-gray-600 relative select-none"
-                      style={{ 
-                        width: columnWidths[index] || DEFAULT_COLUMN_WIDTH,
-                        minWidth: MIN_COLUMN_WIDTH
-                      }}
-                    >
-                      <div className="truncate">{header}</div>
-                      {canEdit && (
-                        <div
-                          className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 transition-colors group"
-                          onMouseDown={(e) => handleColMouseDown(e, index)}
-                        >
-                          <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-blue-400 opacity-0 group-hover:opacity-100 transition-opacity rounded" />
-                        </div>
-                      )}
-                    </th>
-                  ))}
+                  {headers.map((header, index) => {
+                    const headerMergeInfo = getHeaderMergeInfo(index)
+                    
+                    if (headerMergeInfo.shouldHide) {
+                      return null
+                    }
+                    
+                    return (
+                      <th
+                        key={index}
+                        className="border-b border-r border-gray-200 px-3 py-2 bg-gray-50 font-semibold text-gray-600 relative select-none"
+                        style={{ 
+                          width: headerMergeInfo.isMerged 
+                            ? columnWidths.slice(index, index + headerMergeInfo.colSpan).reduce((a, b) => a + b, 0)
+                            : (columnWidths[index] || DEFAULT_COLUMN_WIDTH),
+                          minWidth: MIN_COLUMN_WIDTH
+                        }}
+                        colSpan={headerMergeInfo.colSpan > 1 ? headerMergeInfo.colSpan : undefined}
+                      >
+                        <div className="truncate text-center">{header}</div>
+                        {canEdit && (
+                          <div
+                            className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 transition-colors group"
+                            onMouseDown={(e) => handleColMouseDown(e, index)}
+                          >
+                            <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-blue-400 opacity-0 group-hover:opacity-100 transition-opacity rounded" />
+                          </div>
+                        )}
+                      </th>
+                    )
+                  })}
                   <th className="w-8 min-w-[32px] border-b border-gray-200 bg-gray-50" />
                 </tr>
                 {filteredRows.map((row, rowIndex) => {

@@ -30,6 +30,7 @@ interface ExcelEditorProps {
     fileName: string
     fileSize: number
     merges?: MergeRange[]
+    headerMerges?: MergeRange[]
   }
   onBack: () => void
   userId: string
@@ -208,6 +209,7 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
           column_widths: columnWidths,
           row_heights: rowHeights,
           merges: data.merges || null,
+          header_merges: data.headerMerges || null,
         } as any)
 
       if (rawDataError) {

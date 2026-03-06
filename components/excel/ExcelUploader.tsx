@@ -44,14 +44,41 @@ export default function ExcelUploader({ onUpload }: ExcelUploaderProps) {
         const headers = jsonData[0] as string[]
         const rows = jsonData.slice(1) as any[]
 
-        const merges: MergeRange[] = worksheet['!merges'] || []
+        const allMerges: MergeRange[] = worksheet['!merges'] || []
+        
+        const headerMerges: MergeRange[] = []
+        const dataMerges: MergeRange[] = []
+        
+        allMerges.forEach(merge => {
+          if (merge.s.r === 0 && merge.e.r === 0) {
+            headerMerges.push({
+              s: { r: 0, c: merge.s.c },
+              e: { r: 0, c: merge.e.c }
+            })
+          } else if (merge.s.r === 0 && merge.e.r > 0) {
+            headerMerges.push({
+              s: { r: 0, c: merge.s.c },
+              e: { r: 0, c: merge.e.c }
+            })
+            dataMerges.push({
+              s: { r: 0, c: merge.s.c },
+              e: { r: merge.e.r - 1, c: merge.e.c }
+            })
+          } else {
+            dataMerges.push({
+              s: { r: merge.s.r - 1, c: merge.s.c },
+              e: { r: merge.e.r - 1, c: merge.e.c }
+            })
+          }
+        })
 
         onUpload({
           headers,
           rows,
           fileName: file.name,
           fileSize: file.size,
-          merges,
+          merges: dataMerges,
+          headerMerges,
         })
       } catch (err) {
         setError('解析文件失败，请检查文件格式')
