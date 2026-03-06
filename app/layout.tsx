@@ -33,6 +33,10 @@ export default function RootLayout({
           src="/vanta.birds.min.js" 
           strategy="beforeInteractive"
         />
+        <Script 
+          src="/vanta.topology.min.js" 
+          strategy="beforeInteractive"
+        />
       </head>
       <body className={inter.className}>{children}</body>
     </html>

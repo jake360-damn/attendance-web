@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@/lib/supabase'
 import ExcelUploader from '@/components/excel/ExcelUploader'
@@ -40,6 +40,8 @@ export default function DashboardPage() {
   const [showGlobalHistory, setShowGlobalHistory] = useState(false)
   const [files, setFiles] = useState<SharedFile[]>([])
   const router = useRouter()
+  const vantaRef = useRef<HTMLDivElement>(null)
+  const vantaEffectRef = useRef<any>(null)
 
   useEffect(() => {
     const client = createBrowserClient()
@@ -87,6 +89,52 @@ export default function DashboardPage() {
     
     checkUser()
   }, [router, supabase])
+
+  useEffect(() => {
+    const vantaRefCurrent = vantaRef.current
+    
+    const initVanta = () => {
+      if (!vantaRefCurrent) return
+      if (!window.VANTA || !window.THREE) return
+      
+      if (vantaEffectRef.current) {
+        vantaEffectRef.current.destroy()
+      }
+      
+      vantaEffectRef.current = window.VANTA.TOPOLOGY({
+        el: vantaRefCurrent,
+        mouseControls: true,
+        touchControls: true,
+        gyroControls: false,
+        minHeight: 200.00,
+        minWidth: 200.00,
+        scale: 1.00,
+        scaleMobile: 1.00,
+        color: 0x3f82ff,
+        backgroundColor: 0xf8fafc
+      })
+    }
+    
+    if (window.VANTA && window.THREE && vantaRefCurrent) {
+      initVanta()
+      return
+    }
+    
+    const checkLoaded = setInterval(() => {
+      if (window.VANTA && window.THREE && vantaRefCurrent) {
+        initVanta()
+        clearInterval(checkLoaded)
+      }
+    }, 100)
+    
+    return () => {
+      clearInterval(checkLoaded)
+      if (vantaEffectRef.current) {
+        vantaEffectRef.current.destroy()
+        vantaEffectRef.current = null
+      }
+    }
+  }, [])
 
   const handleLogout = async () => {
     if (!supabase) return
@@ -136,7 +184,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div ref={vantaRef} className="min-h-screen relative">
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-200/50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -217,11 +265,11 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">
         {viewMode === 'files' && (
           <div className="space-y-6 animate-fade-in">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div>
+              <div className="bg-white/70 backdrop-blur-sm rounded-xl px-6 py-4 shadow-sm">
                 <h2 className="text-2xl font-bold text-gray-900">文件列表</h2>
                 <p className="text-gray-500 mt-1">管理您的考勤文件</p>
               </div>
@@ -234,46 +282,54 @@ export default function DashboardPage() {
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
-            <FileList
-              currentUser={user}
-              onSelectFile={handleSelectFile}
-              onViewHistory={handleViewHistory}
-            />
+            <div className="bg-white/70 backdrop-blur-sm rounded-xl shadow-sm">
+              <FileList
+                currentUser={user}
+                onSelectFile={handleSelectFile}
+                onViewHistory={handleViewHistory}
+              />
+            </div>
           </div>
         )}
 
         {viewMode === 'upload' && !excelData && (
           <div className="max-w-2xl mx-auto animate-fade-in">
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-xl shadow-blue-500/25 mb-4">
-                <Upload className="w-8 h-8 text-white" />
+            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-8 shadow-sm">
+              <div className="text-center mb-8">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-xl shadow-blue-500/25 mb-4">
+                  <Upload className="w-8 h-8 text-white" />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                  上传考勤文件
+                </h2>
+                <p className="text-gray-500">
+                  支持 .xlsx 和 .xls 格式的 Excel 文件
+                </p>
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                上传考勤文件
-              </h2>
-              <p className="text-gray-500">
-                支持 .xlsx 和 .xls 格式的 Excel 文件
-              </p>
+              <ExcelUploader onUpload={handleExcelUpload} />
             </div>
-            <ExcelUploader onUpload={handleExcelUpload} />
           </div>
         )}
 
         {viewMode === 'editor' && excelData && (
-          <ExcelEditor
-            data={excelData}
-            onBack={handleBackFromEditor}
-            userId={userId}
-          />
+          <div className="bg-white/70 backdrop-blur-sm rounded-xl shadow-sm">
+            <ExcelEditor
+              data={excelData}
+              onBack={handleBackFromEditor}
+              userId={userId}
+            />
+          </div>
         )}
 
         {viewMode === 'viewer' && selectedFile && (
-          <FileViewer
-            file={selectedFile}
-            currentUser={user}
-            onBack={handleBackFromViewer}
-            onViewHistory={() => handleViewHistory(selectedFile.id)}
-          />
+          <div className="bg-white/70 backdrop-blur-sm rounded-xl shadow-sm">
+            <FileViewer
+              file={selectedFile}
+              currentUser={user}
+              onBack={handleBackFromViewer}
+              onViewHistory={() => handleViewHistory(selectedFile.id)}
+            />
+          </div>
         )}
       </main>
 
