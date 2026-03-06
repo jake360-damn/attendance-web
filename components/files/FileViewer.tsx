@@ -1085,6 +1085,14 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                             onMouseUp={handleCellMouseUp}
                             onDoubleClick={() => startEdit(rowIndex, colIndex, cell)}
                           >
+                            {canEdit && !mergeInfo.shouldHide && (
+                              <div
+                                className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 transition-colors group z-10"
+                                onMouseDown={(e) => handleColMouseDown(e, colIndex)}
+                              >
+                                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-blue-400 opacity-0 group-hover:opacity-100 transition-opacity rounded" />
+                              </div>
+                            )}
                             {editingCell?.row === rowIndex && editingCell?.col === colIndex ? (
                               <div className="flex items-center gap-1 absolute inset-0 bg-white z-10 p-1 shadow-lg border border-blue-300 rounded">
                                 <input
