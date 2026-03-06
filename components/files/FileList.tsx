@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createBrowserClient } from '@/lib/supabase'
 import { SharedFile, User } from '@/types'
 import DeleteConfirmModal from './DeleteConfirmModal'
+import Loading from '@/components/ui/Loading'
 import { 
   FileSpreadsheet, 
   Search, 
@@ -200,12 +201,7 @@ export default function FileList({ currentUser, onSelectFile, onViewHistory }: F
   if (loading) {
     return (
       <div className="card p-12">
-        <div className="flex flex-col items-center justify-center gap-4">
-          <div className="relative">
-            <div className="w-12 h-12 border-3 border-blue-200 rounded-full animate-spin border-t-blue-600"></div>
-          </div>
-          <p className="text-gray-500 font-medium">加载文件列表...</p>
-        </div>
+        <Loading text="加载文件列表..." />
       </div>
     )
   }

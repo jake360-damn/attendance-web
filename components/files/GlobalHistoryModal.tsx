@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createBrowserClient } from '@/lib/supabase'
+import Loading from '@/components/ui/Loading'
 import { 
   X, 
   Clock, 
@@ -232,10 +233,7 @@ export default function GlobalHistoryModal({ onClose }: GlobalHistoryModalProps)
 
         <div className="flex-1 overflow-auto p-4">
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-16">
-              <div className="w-12 h-12 border-3 border-purple-200 rounded-full animate-spin border-t-purple-600"></div>
-              <p className="text-gray-500 mt-4">加载历史记录...</p>
-            </div>
+            <Loading text="加载历史记录..." className="py-16" />
           ) : filteredHistory.length === 0 ? (
             <div className="empty-state py-16">
               <div className="w-20 h-20 bg-gray-100 rounded-2xl flex items-center justify-center mb-4">

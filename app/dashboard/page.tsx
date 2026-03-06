@@ -9,6 +9,7 @@ import FileList from '@/components/files/FileList'
 import FileViewer from '@/components/files/FileViewer'
 import EditHistoryModal from '@/components/files/EditHistoryModal'
 import GlobalHistoryModal from '@/components/files/GlobalHistoryModal'
+import Loading from '@/components/ui/Loading'
 import { User, SharedFile } from '@/types'
 import { 
   LogOut, 
@@ -129,15 +130,7 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="relative">
-            <div className="w-16 h-16 border-4 border-blue-200 rounded-full animate-spin border-t-blue-600"></div>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <FileSpreadsheet className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-          <p className="text-gray-500 font-medium">加载中...</p>
-        </div>
+        <Loading text="加载中..." />
       </div>
     )
   }

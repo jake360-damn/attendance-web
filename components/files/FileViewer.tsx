@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { createBrowserClient } from '@/lib/supabase'
 import { SharedFile, User } from '@/types'
 import * as XLSX from 'xlsx'
+import Loading from '@/components/ui/Loading'
 import { 
   ArrowLeft, 
   Download, 
@@ -814,12 +815,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
   if (loading) {
     return (
       <div className="card p-12">
-        <div className="flex flex-col items-center justify-center gap-4">
-          <div className="relative">
-            <div className="w-12 h-12 border-3 border-blue-200 rounded-full animate-spin border-t-blue-600"></div>
-          </div>
-          <p className="text-gray-500 font-medium">加载数据...</p>
-        </div>
+        <Loading text="加载数据..." />
       </div>
     )
   }
@@ -944,7 +940,12 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                   className="btn bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700 shadow-lg shadow-indigo-500/25"
                 >
                   {savingChanges ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <svg className="w-4 h-4 pl-btn" viewBox="0 0 128 128" fill="none">
+                      <circle className="pl__ring pl__ring--a" cx="64" cy="64" r="56" strokeWidth="12" fill="none" />
+                      <circle className="pl__ring pl__ring--b" cx="64" cy="64" r="56" strokeWidth="12" fill="none" />
+                      <circle className="pl__ring pl__ring--c" cx="64" cy="64" r="56" strokeWidth="12" fill="none" />
+                      <circle className="pl__ring pl__ring--d" cx="64" cy="64" r="56" strokeWidth="12" fill="none" />
+                    </svg>
                   ) : (
                     <Save className="w-4 h-4" />
                   )}
@@ -973,7 +974,12 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                 className={isShared ? "btn btn-warning" : "btn btn-primary"}
               >
                 {saving ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <svg className="w-4 h-4 pl-btn" viewBox="0 0 128 128" fill="none">
+                    <circle className="pl__ring pl__ring--a" cx="64" cy="64" r="56" strokeWidth="12" fill="none" />
+                    <circle className="pl__ring pl__ring--b" cx="64" cy="64" r="56" strokeWidth="12" fill="none" />
+                    <circle className="pl__ring pl__ring--c" cx="64" cy="64" r="56" strokeWidth="12" fill="none" />
+                    <circle className="pl__ring pl__ring--d" cx="64" cy="64" r="56" strokeWidth="12" fill="none" />
+                  </svg>
                 ) : isShared ? (
                   <Lock className="w-4 h-4" />
                 ) : (
