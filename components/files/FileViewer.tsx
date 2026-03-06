@@ -24,7 +24,9 @@ import {
   Undo2,
   Redo2,
   Wand2,
-  Maximize2
+  Maximize2,
+  Merge,
+  Split
 } from 'lucide-react'
 
 interface MergeRange {
@@ -95,6 +97,9 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
   const [rawDataId, setRawDataId] = useState<string | null>(null)
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set())
   const [savingChanges, setSavingChanges] = useState(false)
+  const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set())
+  const [isSelecting, setIsSelecting] = useState(false)
+  const [selectionStart, setSelectionStart] = useState<{row: number, col: number} | null>(null)
   
   const [columnWidths, setColumnWidths] = useState<number[]>([])
   const [rowHeights, setRowHeights] = useState<number[]>([])
@@ -591,6 +596,152 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
     return { isMerged: false, isStart: false, rowSpan: 1, colSpan: 1, shouldHide: false }
   }
 
+  const getSelectedCellRange = () => {
+    if (selectedCells.size === 0) return null
+    
+    const cells = Array.from(selectedCells).map(key => {
+      const [row, col] = key.split(',').map(Number)
+      return { row, col }
+    })
+    
+    const minRow = Math.min(...cells.map(c => c.row))
+    const maxRow = Math.max(...cells.map(c => c.row))
+    const minCol = Math.min(...cells.map(c => c.col))
+    const maxCol = Math.max(...cells.map(c => c.col))
+    
+    const expectedCount = (maxRow - minRow + 1) * (maxCol - minCol + 1)
+    if (selectedCells.size !== expectedCount) return null
+    
+    return { minRow, maxRow, minCol, maxCol }
+  }
+
+  const isRectangularSelection = () => {
+    return getSelectedCellRange() !== null
+  }
+
+  const getMergesInSelection = () => {
+    const range = getSelectedCellRange()
+    if (!range) return []
+    
+    return merges.filter(merge => 
+      merge.s.r >= range.minRow && merge.e.r <= range.maxRow &&
+      merge.s.c >= range.minCol && merge.e.c <= range.maxCol
+    )
+  }
+
+  const mergeSelectedCells = () => {
+    if (!canEdit) return
+    
+    const range = getSelectedCellRange()
+    if (!range) {
+      alert('请选择一个矩形区域进行合并')
+      return
+    }
+    
+    if (range.minRow === range.maxRow && range.minCol === range.maxCol) {
+      alert('请至少选择2个单元格进行合并')
+      return
+    }
+    
+    const existingMerges = getMergesInSelection()
+    if (existingMerges.length > 0) {
+      alert('选区内已存在合并单元格，请先取消合并')
+      return
+    }
+    
+    const newMerge: MergeRange = {
+      s: { r: range.minRow, c: range.minCol },
+      e: { r: range.maxRow, c: range.maxCol }
+    }
+    
+    const newMerges = [...merges, newMerge]
+    setMerges(newMerges)
+    setSelectedCells(new Set())
+    
+    saveToHistory({
+      rows,
+      headers,
+      columnWidths,
+      rowHeights,
+      merges: newMerges
+    })
+  }
+
+  const unmergeSelectedCells = () => {
+    if (!canEdit) return
+    
+    const mergesInSelection = getMergesInSelection()
+    if (mergesInSelection.length === 0) {
+      alert('选区内没有合并单元格')
+      return
+    }
+    
+    const newMerges = merges.filter(merge => !mergesInSelection.includes(merge))
+    setMerges(newMerges)
+    setSelectedCells(new Set())
+    
+    saveToHistory({
+      rows,
+      headers,
+      columnWidths,
+      rowHeights,
+      merges: newMerges
+    })
+  }
+
+  const handleCellMouseDown = (rowIndex: number, colIndex: number, e: React.MouseEvent) => {
+    if (!canEdit) return
+    
+    if (e.shiftKey && selectionStart) {
+      const minRow = Math.min(selectionStart.row, rowIndex)
+      const maxRow = Math.max(selectionStart.row, rowIndex)
+      const minCol = Math.min(selectionStart.col, colIndex)
+      const maxCol = Math.max(selectionStart.col, colIndex)
+      
+      const newSelection = new Set<string>()
+      for (let r = minRow; r <= maxRow; r++) {
+        for (let c = minCol; c <= maxCol; c++) {
+          newSelection.add(`${r},${c}`)
+        }
+      }
+      setSelectedCells(newSelection)
+    } else {
+      setIsSelecting(true)
+      setSelectionStart({ row: rowIndex, col: colIndex })
+      setSelectedCells(new Set([`${rowIndex},${colIndex}`]))
+    }
+  }
+
+  const handleCellMouseEnter = (rowIndex: number, colIndex: number) => {
+    if (!isSelecting || !selectionStart) return
+    
+    const minRow = Math.min(selectionStart.row, rowIndex)
+    const maxRow = Math.max(selectionStart.row, rowIndex)
+    const minCol = Math.min(selectionStart.col, colIndex)
+    const maxCol = Math.max(selectionStart.col, colIndex)
+    
+    const newSelection = new Set<string>()
+    for (let r = minRow; r <= maxRow; r++) {
+      for (let c = minCol; c <= maxCol; c++) {
+        newSelection.add(`${r},${c}`)
+      }
+    }
+    setSelectedCells(newSelection)
+  }
+
+  const handleCellMouseUp = () => {
+    setIsSelecting(false)
+  }
+
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      setIsSelecting(false)
+    }
+    
+    document.addEventListener('mouseup', handleGlobalMouseUp)
+    return () => document.removeEventListener('mouseup', handleGlobalMouseUp)
+  }, [])
+
   const exportExcel = () => {
     const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows])
     
@@ -708,6 +859,26 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                   <Maximize2 className="w-4 h-4" />
                   重置格式
                 </button>
+                <div className="h-6 w-px bg-gray-200 mx-1" />
+                <button
+                  onClick={mergeSelectedCells}
+                  disabled={selectedCells.size < 2 || !isRectangularSelection()}
+                  className="btn btn-secondary disabled:opacity-50"
+                  title="合并选中的单元格"
+                >
+                  <Merge className="w-4 h-4" />
+                  合并
+                </button>
+                <button
+                  onClick={unmergeSelectedCells}
+                  disabled={getMergesInSelection().length === 0}
+                  className="btn btn-secondary disabled:opacity-50"
+                  title="取消合并选中的单元格"
+                >
+                  <Split className="w-4 h-4" />
+                  取消合并
+                </button>
+                <div className="h-6 w-px bg-gray-200 mx-1" />
                 <button
                   onClick={addRow}
                   className="btn btn-primary"
@@ -868,6 +1039,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                     </td>
                     {row.map((cell, colIndex) => {
                       const mergeInfo = getCellMergeInfo(rowIndex, colIndex)
+                      const isSelected = selectedCells.has(`${rowIndex},${colIndex}`)
                       
                       if (mergeInfo.shouldHide) {
                         return null
@@ -876,16 +1048,19 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                       return (
                         <td
                           key={colIndex}
-                          className={`border-r border-gray-200 px-3 py-2 relative ${
+                          className={`border-r border-gray-200 px-3 py-2 relative select-none ${
                             mergeInfo.isMerged ? 'bg-blue-50/50' : ''
-                          }`}
+                          } ${isSelected ? 'bg-blue-100 ring-2 ring-blue-400 ring-inset' : ''}`}
                           style={{ 
                             width: columnWidths[colIndex] || DEFAULT_COLUMN_WIDTH,
                             minWidth: MIN_COLUMN_WIDTH
                           }}
                           rowSpan={mergeInfo.rowSpan > 1 ? mergeInfo.rowSpan : undefined}
                           colSpan={mergeInfo.colSpan > 1 ? mergeInfo.colSpan : undefined}
-                          onClick={() => startEdit(rowIndex, colIndex, cell)}
+                          onMouseDown={(e) => handleCellMouseDown(rowIndex, colIndex, e)}
+                          onMouseEnter={() => handleCellMouseEnter(rowIndex, colIndex)}
+                          onMouseUp={handleCellMouseUp}
+                          onDoubleClick={() => startEdit(rowIndex, colIndex, cell)}
                         >
                           {editingCell?.row === rowIndex && editingCell?.col === colIndex ? (
                             <div className="flex items-center gap-1 absolute inset-0 bg-white z-10 p-1 shadow-lg border border-blue-300 rounded">
@@ -975,12 +1150,15 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
             <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-blue-700">
               {canEdit && (
                 <>
-                  <span>点击单元格 - 编辑内容</span>
+                  <span>拖动选择 - 选中多个单元格</span>
+                  <span>双击单元格 - 编辑内容</span>
+                  <span>Shift+点击 - 扩展选择</span>
                   <span>拖动列边界 - 调整列宽</span>
                   <span>拖动行底部 - 调整行高</span>
                   <span>Ctrl+Z - 撤销</span>
-                  <span>Ctrl+Y / Ctrl+Shift+Z - 重做</span>
-                  <span className="text-purple-600 font-medium">自动格式 - 智能调整列宽行高</span>
+                  <span>Ctrl+Y - 重做</span>
+                  <span className="text-purple-600 font-medium">合并 - 合并选中的单元格</span>
+                  <span className="text-purple-600 font-medium">取消合并 - 拆分合并的单元格</span>
                 </>
               )}
               {isAdmin && <span className="text-purple-600 font-medium">管理员可控制文件共享状态</span>}
