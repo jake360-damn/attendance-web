@@ -72,6 +72,10 @@ export default function ExcelUploader({ onUpload }: ExcelUploaderProps) {
           }
         })
 
+        console.log('Excel upload - headerMerges:', headerMerges)
+        console.log('Excel upload - dataMerges:', dataMerges)
+        console.log('Excel upload - allMerges:', allMerges)
+        
         onUpload({
           headers,
           rows,
