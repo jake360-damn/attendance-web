@@ -95,7 +95,7 @@ export default function DashboardPage() {
     
     const initVanta = () => {
       if (!vantaRefCurrent) return
-      if (!window.VANTA || !window.p5) return
+      if (!window.VANTA || !window.THREE || !window.p5) return
       
       if (vantaEffectRef.current) {
         vantaEffectRef.current.destroy()
@@ -115,13 +115,13 @@ export default function DashboardPage() {
       })
     }
     
-    if (window.VANTA && window.p5 && vantaRefCurrent) {
+    if (window.VANTA && window.THREE && window.p5 && vantaRefCurrent) {
       initVanta()
       return
     }
     
     const checkLoaded = setInterval(() => {
-      if (window.VANTA && window.p5 && vantaRefCurrent) {
+      if (window.VANTA && window.THREE && window.p5 && vantaRefCurrent) {
         initVanta()
         clearInterval(checkLoaded)
       }
