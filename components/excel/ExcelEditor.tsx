@@ -204,6 +204,8 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
         .insert({
           file_id: fileId,
           all_data: allData,
+          headers: headers,
+          rows: rows,
           column_widths: columnWidths,
           row_heights: rowHeights,
           merges: data.merges || null,
