@@ -294,9 +294,15 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
 
     if (rawDataId) {
       try {
+        const newHeaders = newAllData[0]
+        const newRows = newAllData.slice(1)
         await supabase
           .from('excel_data_raw')
-          .update({ all_data: newAllData })
+          .update({ 
+            all_data: newAllData,
+            headers: newHeaders,
+            rows: newRows
+          })
           .eq('id', rawDataId)
 
         await supabase
@@ -370,7 +376,12 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
     try {
       await supabase
         .from('excel_data_raw')
-        .update({ all_data: newAllData, row_heights: newRowHeights })
+        .update({ 
+          all_data: newAllData, 
+          headers: headers,
+          rows: newRows,
+          row_heights: newRowHeights 
+        })
         .eq('id', rawDataId)
 
       await supabase
@@ -409,6 +420,8 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
         .from('excel_data_raw')
         .update({ 
           all_data: allData,
+          headers: headers,
+          rows: rows,
           row_heights: rowHeights,
           column_widths: columnWidths,
           merges: merges,
