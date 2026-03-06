@@ -122,27 +122,18 @@ export default function LoginPage() {
   }, [])
 
   useEffect(() => {
-    let checkInterval: NodeJS.Timeout | null = null
-    let timeout: NodeJS.Timeout | null = null
-    let isDestroyed = false
+    const vantaRefCurrent = vantaRef.current
     
-    const tryInitVanta = () => {
-      if (isDestroyed) return
-      
-      if (!vantaRef.current) {
-        return
-      }
-      
-      if (!window.VANTA || !window.THREE) {
-        return
-      }
+    const initVanta = () => {
+      if (!vantaRefCurrent) return
+      if (!window.VANTA || !window.THREE) return
       
       if (vantaEffectRef.current) {
         vantaEffectRef.current.destroy()
       }
       
       vantaEffectRef.current = window.VANTA.BIRDS({
-        el: vantaRef.current,
+        el: vantaRefCurrent,
         mouseControls: true,
         touchControls: true,
         gyroControls: false,
@@ -161,22 +152,22 @@ export default function LoginPage() {
         cohesion: 20.00,
         quantity: 5.00
       })
-      
-      if (checkInterval) clearInterval(checkInterval)
-      if (timeout) clearTimeout(timeout)
     }
     
-    checkInterval = setInterval(tryInitVanta, 100)
-    timeout = setTimeout(() => {
-      if (checkInterval) clearInterval(checkInterval)
-    }, 5000)
+    if (window.VANTA && window.THREE && vantaRefCurrent) {
+      initVanta()
+      return
+    }
     
-    tryInitVanta()
+    const checkLoaded = setInterval(() => {
+      if (window.VANTA && window.THREE && vantaRefCurrent) {
+        initVanta()
+        clearInterval(checkLoaded)
+      }
+    }, 100)
     
     return () => {
-      isDestroyed = true
-      if (checkInterval) clearInterval(checkInterval)
-      if (timeout) clearTimeout(timeout)
+      clearInterval(checkLoaded)
       if (vantaEffectRef.current) {
         vantaEffectRef.current.destroy()
         vantaEffectRef.current = null
@@ -210,15 +201,6 @@ export default function LoginPage() {
 
   return (
     <>
-      <Script 
-        src="/three.min.js" 
-        strategy="beforeInteractive"
-      />
-      <Script 
-        src="/vanta.birds.min.js" 
-        strategy="afterInteractive"
-      />
-      
       {loading && (
         <div className="loading-overlay">
           <HamsterLoader />

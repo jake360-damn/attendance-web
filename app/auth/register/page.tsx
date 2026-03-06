@@ -227,15 +227,6 @@ export default function RegisterPage() {
 
   return (
     <>
-      <Script 
-        src="/three.min.js" 
-        strategy="beforeInteractive"
-      />
-      <Script 
-        src="/vanta.birds.min.js" 
-        strategy="afterInteractive"
-      />
-      
       {loading && (
         <div className="loading-overlay">
           <HamsterLoader />

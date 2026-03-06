@@ -1,12 +1,20 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
+import Script from 'next/script'
 
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: '考勤管理系统',
   description: '在线考勤管理和Excel协作编辑平台',
+}
+
+declare global {
+  interface Window {
+    VANTA: any
+    THREE: any
+  }
 }
 
 export default function RootLayout({
@@ -16,6 +24,16 @@ export default function RootLayout({
 }) {
   return (
     <html lang="zh-CN">
+      <head>
+        <Script 
+          src="/three.min.js" 
+          strategy="beforeInteractive"
+        />
+        <Script 
+          src="/vanta.birds.min.js" 
+          strategy="beforeInteractive"
+        />
+      </head>
       <body className={inter.className}>{children}</body>
     </html>
   )
