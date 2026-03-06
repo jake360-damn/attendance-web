@@ -530,7 +530,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
         document.removeEventListener('mouseup', handleMouseUp)
       }
     }
-  }, [resizingCol, resizingRow, startX, startY, startWidth, startHeight, columnWidths, rowHeights, rows, headers, saveToHistory])
+  }, [resizingCol, resizingRow, startX, startY, startWidth, startHeight, columnWidths, rowHeights, allData, saveToHistory])
 
   const autoFormat = () => {
     const newColWidths = headers.map((header, colIndex) => {
@@ -1085,13 +1085,15 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                             onMouseUp={handleCellMouseUp}
                             onDoubleClick={() => startEdit(rowIndex, colIndex, cell)}
                           >
-                            {canEdit && !mergeInfo.shouldHide && (
+                            {canEdit && isHeaderRow && !mergeInfo.shouldHide && (
                               <div
-                                className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 transition-colors group z-10"
-                                onMouseDown={(e) => handleColMouseDown(e, colIndex)}
-                              >
-                                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-blue-400 opacity-0 group-hover:opacity-100 transition-opacity rounded" />
-                              </div>
+                                className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-blue-500 transition-colors z-20"
+                                onMouseDown={(e) => {
+                                  e.stopPropagation()
+                                  handleColMouseDown(e, colIndex)
+                                }}
+                                title="拖动调整列宽"
+                              />
                             )}
                             {editingCell?.row === rowIndex && editingCell?.col === colIndex ? (
                               <div className="flex items-center gap-1 absolute inset-0 bg-white z-10 p-1 shadow-lg border border-blue-300 rounded">
@@ -1142,11 +1144,13 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                       <td className="relative">
                         {canEdit && (
                           <div
-                            className="absolute left-0 right-0 bottom-0 h-1 cursor-row-resize hover:bg-blue-400 transition-colors group"
-                            onMouseDown={(e) => handleRowMouseDown(e, rowIndex)}
-                          >
-                            <div className="absolute left-1/2 -translate-x-1/2 bottom-0 w-8 h-1 bg-blue-400 opacity-0 group-hover:opacity-100 transition-opacity rounded" />
-                          </div>
+                            className="absolute left-0 right-0 bottom-0 h-2 cursor-row-resize hover:bg-blue-500 transition-colors z-20"
+                            onMouseDown={(e) => {
+                              e.stopPropagation()
+                              handleRowMouseDown(e, rowIndex)
+                            }}
+                            title="拖动调整行高"
+                          />
                         )}
                       </td>
                     </tr>
