@@ -27,6 +27,11 @@ import {
   Maximize2
 } from 'lucide-react'
 
+interface MergeRange {
+  s: { r: number; c: number }
+  e: { r: number; c: number }
+}
+
 interface FileViewerProps {
   file: SharedFile
   currentUser: User | null
@@ -39,6 +44,7 @@ interface HistoryState {
   headers: string[]
   columnWidths: number[]
   rowHeights: number[]
+  merges: MergeRange[]
 }
 
 const DEFAULT_COLUMN_WIDTH = 150
@@ -92,6 +98,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
   
   const [columnWidths, setColumnWidths] = useState<number[]>([])
   const [rowHeights, setRowHeights] = useState<number[]>([])
+  const [merges, setMerges] = useState<MergeRange[]>([])
   const [resizingCol, setResizingCol] = useState<number | null>(null)
   const [resizingRow, setResizingRow] = useState<number | null>(null)
   const [startX, setStartX] = useState(0)
@@ -135,6 +142,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
       setHeaders(prevState.headers)
       setColumnWidths(prevState.columnWidths)
       setRowHeights(prevState.rowHeights)
+      setMerges(prevState.merges)
       setHistoryIndex(historyIndex - 1)
     }
   }, [history, historyIndex])
@@ -146,6 +154,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
       setHeaders(nextState.headers)
       setColumnWidths(nextState.columnWidths)
       setRowHeights(nextState.rowHeights)
+      setMerges(nextState.merges)
       setHistoryIndex(historyIndex + 1)
     }
   }, [history, historyIndex])
@@ -167,6 +176,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
         
         let loadedColWidths = rawData.column_widths
         let loadedRowHeights = rawData.row_heights
+        const loadedMerges: MergeRange[] = rawData.merges || []
         
         if (!loadedColWidths || !loadedRowHeights) {
           const autoFormat = calculateAutoFormat(loadedHeaders, loadedRows)
@@ -179,12 +189,14 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
         setRawDataId(rawData.id)
         setColumnWidths(loadedColWidths)
         setRowHeights(loadedRowHeights)
+        setMerges(loadedMerges)
         
         const initialState: HistoryState = {
           rows: loadedRows,
           headers: loadedHeaders,
           columnWidths: loadedColWidths,
-          rowHeights: loadedRowHeights
+          rowHeights: loadedRowHeights,
+          merges: loadedMerges
         }
         setHistory([initialState])
         setHistoryIndex(0)
@@ -214,12 +226,14 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
           setRows(recordRows)
           setColumnWidths(autoFormat.columnWidths)
           setRowHeights(autoFormat.rowHeights)
+          setMerges([])
           
           const initialState: HistoryState = {
             rows: recordRows,
             headers: recordHeaders,
             columnWidths: autoFormat.columnWidths,
-            rowHeights: autoFormat.rowHeights
+            rowHeights: autoFormat.rowHeights,
+            merges: []
           }
           setHistory([initialState])
           setHistoryIndex(0)
@@ -271,7 +285,8 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
       rows: newRows,
       headers,
       columnWidths,
-      rowHeights
+      rowHeights,
+      merges
     })
 
     if (rawDataId) {
@@ -316,7 +331,8 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
       rows: newRows,
       headers,
       columnWidths,
-      rowHeights: [...rowHeights, DEFAULT_ROW_HEIGHT]
+      rowHeights: [...rowHeights, DEFAULT_ROW_HEIGHT],
+      merges
     })
   }
 
@@ -371,7 +387,8 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
         rows: newRows,
         headers,
         columnWidths,
-        rowHeights: newRowHeights
+        rowHeights: newRowHeights,
+        merges
       })
     } catch (error) {
       console.error('删除行失败:', error)
@@ -392,6 +409,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
           rows: rows,
           row_heights: rowHeights,
           column_widths: columnWidths,
+          merges: merges,
           updated_at: new Date().toISOString()
         })
         .eq('id', rawDataId)
@@ -481,7 +499,8 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
           rows,
           headers,
           columnWidths,
-          rowHeights
+          rowHeights,
+          merges
         })
       }
       setResizingCol(null)
@@ -532,7 +551,8 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
       rows,
       headers,
       columnWidths: newColWidths,
-      rowHeights: newRowHeights
+      rowHeights: newRowHeights,
+      merges
     })
   }
 
@@ -547,12 +567,41 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
       rows,
       headers,
       columnWidths: newColWidths,
-      rowHeights: newRowHeights
+      rowHeights: newRowHeights,
+      merges
     })
+  }
+
+  const getCellMergeInfo = (rowIndex: number, colIndex: number) => {
+    for (const merge of merges) {
+      if (rowIndex >= merge.s.r && rowIndex <= merge.e.r &&
+          colIndex >= merge.s.c && colIndex <= merge.e.c) {
+        const isStart = rowIndex === merge.s.r && colIndex === merge.s.c
+        const rowSpan = merge.e.r - merge.s.r + 1
+        const colSpan = merge.e.c - merge.s.c + 1
+        return {
+          isMerged: true,
+          isStart,
+          rowSpan: isStart ? rowSpan : 0,
+          colSpan: isStart ? colSpan : 0,
+          shouldHide: !isStart
+        }
+      }
+    }
+    return { isMerged: false, isStart: false, rowSpan: 1, colSpan: 1, shouldHide: false }
   }
 
   const exportExcel = () => {
     const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows])
+    
+    if (merges.length > 0) {
+      const adjustedMerges = merges.map(m => ({
+        s: { r: m.s.r + 1, c: m.s.c },
+        e: { r: m.e.r + 1, c: m.e.c }
+      }))
+      worksheet['!merges'] = adjustedMerges
+    }
+    
     const workbook = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1')
     XLSX.writeFile(workbook, file.file_name)
@@ -817,59 +866,73 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                     <td className="border-r border-gray-200 px-2 py-2 text-gray-400 font-medium text-center bg-gray-50/50">
                       {rowIndex + 1}
                     </td>
-                    {row.map((cell, colIndex) => (
-                      <td
-                        key={colIndex}
-                        className="border-r border-gray-200 px-3 py-2 relative"
-                        style={{ 
-                          width: columnWidths[colIndex] || DEFAULT_COLUMN_WIDTH,
-                          minWidth: MIN_COLUMN_WIDTH
-                        }}
-                        onClick={() => startEdit(rowIndex, colIndex, cell)}
-                      >
-                        {editingCell?.row === rowIndex && editingCell?.col === colIndex ? (
-                          <div className="flex items-center gap-1 absolute inset-0 bg-white z-10 p-1 shadow-lg border border-blue-300 rounded">
-                            <input
-                              type="text"
-                              value={editValue}
-                              onChange={(e) => setEditValue(e.target.value)}
-                              onKeyDown={handleKeyDown}
-                              autoFocus
-                              className="flex-1 px-2 py-1 border-0 focus:outline-none text-sm"
-                            />
-                            <button
-                              onClick={(e) => { e.stopPropagation(); saveEdit(); }}
-                              className="p-1 text-green-600 hover:bg-green-50 rounded"
+                    {row.map((cell, colIndex) => {
+                      const mergeInfo = getCellMergeInfo(rowIndex, colIndex)
+                      
+                      if (mergeInfo.shouldHide) {
+                        return null
+                      }
+                      
+                      return (
+                        <td
+                          key={colIndex}
+                          className={`border-r border-gray-200 px-3 py-2 relative ${
+                            mergeInfo.isMerged ? 'bg-blue-50/50' : ''
+                          }`}
+                          style={{ 
+                            width: columnWidths[colIndex] || DEFAULT_COLUMN_WIDTH,
+                            minWidth: MIN_COLUMN_WIDTH
+                          }}
+                          rowSpan={mergeInfo.rowSpan > 1 ? mergeInfo.rowSpan : undefined}
+                          colSpan={mergeInfo.colSpan > 1 ? mergeInfo.colSpan : undefined}
+                          onClick={() => startEdit(rowIndex, colIndex, cell)}
+                        >
+                          {editingCell?.row === rowIndex && editingCell?.col === colIndex ? (
+                            <div className="flex items-center gap-1 absolute inset-0 bg-white z-10 p-1 shadow-lg border border-blue-300 rounded">
+                              <input
+                                type="text"
+                                value={editValue}
+                                onChange={(e) => setEditValue(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                autoFocus
+                                className="flex-1 px-2 py-1 border-0 focus:outline-none text-sm"
+                              />
+                              <button
+                                onClick={(e) => { e.stopPropagation(); saveEdit(); }}
+                                className="p-1 text-green-600 hover:bg-green-50 rounded"
+                              >
+                                <Check className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); cancelEdit(); }}
+                                className="p-1 text-red-600 hover:bg-red-50 rounded"
+                              >
+                                <XIcon className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div 
+                              className={`text-sm overflow-hidden transition-colors ${
+                                canEdit 
+                                  ? 'cursor-pointer hover:bg-amber-50 hover:text-amber-700 rounded px-1' 
+                                  : 'cursor-default'
+                              } ${mergeInfo.isMerged ? 'font-medium text-blue-800' : ''}`}
+                              style={{ 
+                                maxHeight: mergeInfo.isMerged && mergeInfo.rowSpan > 1 
+                                  ? (rowHeights.slice(rowIndex, rowIndex + mergeInfo.rowSpan).reduce((a, b) => a + b, 0)) 
+                                  : (rowHeights[rowIndex] || DEFAULT_ROW_HEIGHT) - 16,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
+                              }}
+                              title={String(cell || '')}
                             >
-                              <Check className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); cancelEdit(); }}
-                              className="p-1 text-red-600 hover:bg-red-50 rounded"
-                            >
-                              <XIcon className="w-4 h-4" />
-                            </button>
-                          </div>
-                        ) : (
-                          <div 
-                            className={`text-sm overflow-hidden transition-colors ${
-                              canEdit 
-                                ? 'cursor-pointer hover:bg-amber-50 hover:text-amber-700 rounded px-1' 
-                                : 'cursor-default'
-                            }`}
-                            style={{ 
-                              maxHeight: (rowHeights[rowIndex] || DEFAULT_ROW_HEIGHT) - 16,
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap'
-                            }}
-                            title={String(cell || '')}
-                          >
-                            {(cell !== null && cell !== undefined && cell !== '') ? cell : '-'}
-                          </div>
-                        )}
-                      </td>
-                    ))}
+                              {(cell !== null && cell !== undefined && cell !== '') ? cell : '-'}
+                            </div>
+                          )}
+                        </td>
+                      )
+                    })}
                     <td className="relative">
                       {canEdit && (
                         <div

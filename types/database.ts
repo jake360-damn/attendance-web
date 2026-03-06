@@ -227,6 +227,7 @@ export interface Database {
           rows: any
           column_widths: number[] | null
           row_heights: number[] | null
+          merges: Json | null
           created_at: string
           updated_at: string
         }
@@ -237,6 +238,7 @@ export interface Database {
           rows: any
           column_widths?: number[] | null
           row_heights?: number[] | null
+          merges?: Json | null
           created_at?: string
           updated_at?: string
         }
@@ -247,6 +249,7 @@ export interface Database {
           rows?: any
           column_widths?: number[] | null
           row_heights?: number[] | null
+          merges?: Json | null
           created_at?: string
           updated_at?: string
         }
