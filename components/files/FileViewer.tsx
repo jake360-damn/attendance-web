@@ -992,8 +992,24 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
           </div>
           <div className="flex items-center gap-3">
             <div className="text-sm text-gray-500">
-              {searchTerm && `显示 ${filteredRows.length} / ${rows.length} 行`}
+              {searchTerm ? (
+                <span className="flex items-center gap-2">
+                  <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full font-medium">
+                    显示 {filteredRows.length} / {rows.length} 行
+                  </span>
+                </span>
+              ) : (
+                <span>共 {rows.length} 行数据</span>
+              )}
             </div>
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+              >
+                清除搜索
+              </button>
+            )}
             {isShared ? (
               <span className="badge badge-success">
                 <Share2 className="w-3 h-3" />
