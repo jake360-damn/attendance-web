@@ -14,6 +14,7 @@ declare global {
   interface Window {
     VANTA: any
     THREE: any
+    p5: any
   }
 }
 
@@ -27,6 +28,10 @@ export default function RootLayout({
       <head>
         <Script 
           src="/three.min.js" 
+          strategy="beforeInteractive"
+        />
+        <Script 
+          src="/p5.min.js" 
           strategy="beforeInteractive"
         />
         <Script 
