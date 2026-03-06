@@ -1131,24 +1131,138 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                     )}
                   </td>
                 </tr>
-                {/* 数据行 - 根据搜索过滤 */}
-                {filteredRows.map((row, filteredIndex) => {
+                {/* 冻结行 - 始终显示原始数据（不受搜索影响） */}
+                {searchTerm === '' && frozenRows > 0 && rows.slice(0, frozenRows).map((row, index) => {
+                  const rowIndex = index + 1
+                  const rowStyle = getRowStyle(rowIndex)
+                  
+                  return (
+                    <tr 
+                      key={`frozen-${index}`} 
+                      className={`border-b border-gray-100 transition-colors bg-gray-50 ${
+                        selectedRows.has(index) ? 'bg-blue-50' : ''
+                      } ${resizingRow === rowIndex ? 'bg-blue-100' : ''}`}
+                      style={{ 
+                        height: rowHeights[rowIndex] || DEFAULT_ROW_HEIGHT,
+                        ...rowStyle
+                      }}
+                    >
+                      {canEdit && (
+                        <td className="border-r border-gray-200 px-2 py-2 text-center bg-gray-50/50">
+                          <input
+                            type="checkbox"
+                            checked={selectedRows.has(index)}
+                            onChange={() => toggleRowSelection(index)}
+                            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                        </td>
+                      )}
+                      {/* 序号列已隐藏 - 用户有自己的序号列 */}
+                      {row.map((cell, colIndex) => {
+                        const mergeInfo = getCellMergeInfo(rowIndex, colIndex)
+                        const isSelected = selectedCells.has(`${rowIndex},${colIndex}`)
+                        
+                        if (mergeInfo.shouldHide) {
+                          return null
+                        }
+                        
+                        return (
+                          <td
+                            key={colIndex}
+                            className={`border-r border-gray-200 px-3 py-2 relative select-none ${
+                              mergeInfo.isMerged ? 'bg-blue-50/50' : ''
+                            } ${isSelected ? 'bg-blue-100 ring-2 ring-blue-400 ring-inset' : ''}`}
+                            style={{ 
+                              width: mergeInfo.isMerged && mergeInfo.colSpan > 1
+                                ? columnWidths.slice(colIndex, colIndex + mergeInfo.colSpan).reduce((a, b) => a + b, 0)
+                                : (columnWidths[colIndex] || DEFAULT_COLUMN_WIDTH),
+                              minWidth: MIN_COLUMN_WIDTH
+                            }}
+                            rowSpan={mergeInfo.rowSpan > 1 ? mergeInfo.rowSpan : undefined}
+                            colSpan={mergeInfo.colSpan > 1 ? mergeInfo.colSpan : undefined}
+                            onMouseDown={(e) => handleCellMouseDown(rowIndex, colIndex, e)}
+                            onMouseEnter={() => handleCellMouseEnter(rowIndex, colIndex)}
+                            onMouseUp={handleCellMouseUp}
+                            onDoubleClick={() => startEdit(rowIndex, colIndex, cell)}
+                          >
+                            {editingCell?.row === rowIndex && editingCell?.col === colIndex ? (
+                              <div className="flex items-center gap-1 absolute inset-0 bg-white z-10 p-1 shadow-lg border border-blue-300 rounded">
+                                <input
+                                  type="text"
+                                  value={editValue}
+                                  onChange={(e) => setEditValue(e.target.value)}
+                                  onKeyDown={handleKeyDown}
+                                  autoFocus
+                                  className="flex-1 px-2 py-1 border-0 focus:outline-none text-sm"
+                                />
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); saveEdit(); }}
+                                  className="p-1 text-green-600 hover:bg-green-50 rounded"
+                                >
+                                  <Check className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); cancelEdit(); }}
+                                  className="p-1 text-red-600 hover:bg-red-50 rounded"
+                                >
+                                  <XIcon className="w-4 h-4" />
+                                </button>
+                              </div>
+                            ) : (
+                              <div 
+                                className={`text-sm overflow-hidden transition-colors ${
+                                  canEdit
+                                    ? 'cursor-pointer hover:bg-amber-50 hover:text-amber-700 rounded px-1' 
+                                    : 'cursor-default'
+                                } ${mergeInfo.isMerged ? 'font-medium text-blue-800' : ''}`}
+                                style={{ 
+                                  maxHeight: mergeInfo.isMerged && mergeInfo.rowSpan > 1 
+                                    ? (rowHeights.slice(rowIndex, rowIndex + mergeInfo.rowSpan).reduce((a, b) => a + b, 0)) 
+                                    : (rowHeights[rowIndex] || DEFAULT_ROW_HEIGHT) - 16,
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap'
+                                }}
+                                title={String(cell || '')}
+                              >
+                                {(cell !== null && cell !== undefined && cell !== '') ? cell : '-'}
+                              </div>
+                            )}
+                          </td>
+                        )
+                      })}
+                      <td className="relative">
+                        {canEdit && (
+                          <div
+                            className="absolute left-0 right-0 bottom-0 h-2 cursor-row-resize hover:bg-blue-500 transition-colors z-20"
+                            onMouseDown={(e) => {
+                              e.stopPropagation()
+                              handleRowMouseDown(e, rowIndex)
+                            }}
+                            title="拖动调整行高"
+                          />
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
+                {/* 数据行 - 根据搜索过滤（排除冻结行） */}
+                {filteredRows.filter(row => {
                   const originalIndex = rows.indexOf(row)
                   const rowIndex = originalIndex + 1
-                  const isFrozen = isRowFrozen(rowIndex)
-                  const rowStyle = getRowStyle(rowIndex)
+                  return rowIndex > frozenRows
+                }).map((row, filteredIndex) => {
+                  const originalIndex = rows.indexOf(row)
+                  const rowIndex = originalIndex + 1
                   
                   return (
                     <tr 
                       key={filteredIndex} 
                       className={`border-b border-gray-100 transition-colors ${
                         selectedRows.has(originalIndex) ? 'bg-blue-50' : 'hover:bg-gray-50'
-                      } ${resizingRow === rowIndex ? 'bg-blue-100' : ''} ${
-                        isFrozen ? 'bg-gray-50' : ''
-                      }`}
+                      } ${resizingRow === rowIndex ? 'bg-blue-100' : ''}`}
                       style={{ 
-                        height: rowHeights[rowIndex] || DEFAULT_ROW_HEIGHT,
-                        ...rowStyle
+                        height: rowHeights[rowIndex] || DEFAULT_ROW_HEIGHT
                       }}
                     >
                       {canEdit && (
@@ -1175,9 +1289,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                             key={colIndex}
                             className={`border-r border-gray-200 px-3 py-2 relative select-none ${
                               mergeInfo.isMerged ? 'bg-blue-50/50' : ''
-                            } ${isSelected ? 'bg-blue-100 ring-2 ring-blue-400 ring-inset' : ''} ${
-                              isFrozen ? 'bg-gray-50' : ''
-                            }`}
+                            } ${isSelected ? 'bg-blue-100 ring-2 ring-blue-400 ring-inset' : ''}`}
                             style={{ 
                               width: mergeInfo.isMerged && mergeInfo.colSpan > 1
                                 ? columnWidths.slice(colIndex, colIndex + mergeInfo.colSpan).reduce((a, b) => a + b, 0)
