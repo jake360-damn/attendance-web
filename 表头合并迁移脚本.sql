@@ -1,0 +1,2 @@
+ALTER TABLE excel_data_raw 
+ADD COLUMN IF NOT EXISTS header_merges JSONB DEFAULT NULL;
