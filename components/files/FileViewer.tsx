@@ -271,7 +271,11 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
     if (!editingCell || !supabase) return
     
     const { row, col } = editingCell
-    const oldValue = rows[row][col]
+    
+    // 处理表头编辑 (row = -1 表示表头)
+    const isHeaderEdit = row === -1
+    const actualRow = isHeaderEdit ? 0 : row + 1
+    const oldValue = isHeaderEdit ? headers[col] : rows[row][col]
     
     if (oldValue === editValue) {
       setEditingCell(null)
@@ -280,7 +284,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
     }
 
     const newAllData = [...allData]
-    newAllData[row + 1][col] = editValue
+    newAllData[actualRow][col] = editValue
     setAllData(newAllData)
     setEditingCell(null)
     setEditValue('')
@@ -311,12 +315,14 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
             file_id: file.id,
             user_id: currentUser?.id,
             action: 'update',
-            row_index: row,
+            row_index: isHeaderEdit ? 0 : row,
             col_index: col,
-            field_name: headers[col],
+            field_name: isHeaderEdit ? '表头' : headers[col],
             old_value: String(oldValue || ''),
             new_value: String(editValue || ''),
-            description: `修改了第 ${row + 1} 行的 "${headers[col]}" 字段`,
+            description: isHeaderEdit 
+              ? `修改了表头 "${oldValue}" 为 "${editValue}"`
+              : `修改了第 ${row + 1} 行的 "${headers[col]}" 字段`,
           })
       } catch (error) {
         console.error('更新数据失败:', error)
@@ -1033,7 +1039,10 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                 {/* 表头行 - 始终显示 */}
                 <tr 
                   className="border-b border-gray-100 transition-colors bg-gradient-to-r from-gray-50 to-gray-100"
-                  style={{ height: rowHeights[0] || DEFAULT_ROW_HEIGHT }}
+                  style={{ 
+                    height: rowHeights[0] || DEFAULT_ROW_HEIGHT,
+                    ...(isRowFrozen(0) ? getRowStyle(0) : {})
+                  }}
                 >
                   {canEdit && (
                     <td className="border-r border-gray-200 px-2 py-2 text-center bg-gray-50/50">
@@ -1065,6 +1074,10 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                         }}
                         rowSpan={mergeInfo.rowSpan > 1 ? mergeInfo.rowSpan : undefined}
                         colSpan={mergeInfo.colSpan > 1 ? mergeInfo.colSpan : undefined}
+                        onMouseDown={(e) => handleCellMouseDown(0, colIndex, e)}
+                        onMouseEnter={() => handleCellMouseEnter(0, colIndex)}
+                        onMouseUp={handleCellMouseUp}
+                        onDoubleClick={() => canEdit && startEdit(-1, colIndex, cell)}
                       >
                         {canEdit && !mergeInfo.shouldHide && (
                           <div
@@ -1076,13 +1089,49 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                             title="拖动调整列宽"
                           />
                         )}
-                        <div className="text-sm overflow-hidden text-center">
-                          {cell || '-'}
-                        </div>
+                        {editingCell?.row === -1 && editingCell?.col === colIndex ? (
+                          <div className="flex items-center gap-1 absolute inset-0 bg-white z-10 p-1 shadow-lg border border-blue-300 rounded">
+                            <input
+                              type="text"
+                              value={editValue}
+                              onChange={(e) => setEditValue(e.target.value)}
+                              onKeyDown={handleKeyDown}
+                              autoFocus
+                              className="flex-1 px-2 py-1 border-0 focus:outline-none text-sm"
+                            />
+                            <button
+                              onClick={(e) => { e.stopPropagation(); saveEdit(); }}
+                              className="p-1 text-green-600 hover:bg-green-50 rounded"
+                            >
+                              <Check className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); cancelEdit(); }}
+                              className="p-1 text-red-600 hover:bg-red-50 rounded"
+                            >
+                              <XIcon className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="text-sm overflow-hidden text-center cursor-pointer hover:bg-amber-50 hover:text-amber-700 rounded px-1 transition-colors">
+                            {cell || '-'}
+                          </div>
+                        )}
                       </th>
                     )
                   })}
-                  <td className="relative"></td>
+                  <td className="relative">
+                    {canEdit && (
+                      <div
+                        className="absolute left-0 right-0 bottom-0 h-2 cursor-row-resize hover:bg-blue-500 transition-colors z-20"
+                        onMouseDown={(e) => {
+                          e.stopPropagation()
+                          handleRowMouseDown(e, 0)
+                        }}
+                        title="拖动调整行高"
+                      />
+                    )}
+                  </td>
                 </tr>
                 {/* 数据行 - 根据搜索过滤 */}
                 {filteredRows.map((row, filteredIndex) => {
