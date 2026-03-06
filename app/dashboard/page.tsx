@@ -196,7 +196,13 @@ export default function DashboardPage() {
   }
 
   return (
-    <div ref={vantaRef} className="min-h-screen relative">
+    <div className="min-h-screen relative">
+      <div 
+        ref={vantaRef} 
+        className="fixed inset-0 w-full h-full"
+        style={{ zIndex: 0 }}
+      />
+      <div className="relative z-10">
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-200/50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -358,6 +364,7 @@ export default function DashboardPage() {
           onClose={() => setShowGlobalHistory(false)}
         />
       )}
+      </div>
     </div>
   )
 }
