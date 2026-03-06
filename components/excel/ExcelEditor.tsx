@@ -25,12 +25,10 @@ interface MergeRange {
 
 interface ExcelEditorProps {
   data: {
-    headers: string[]
-    rows: any[][]
+    allData: any[][]
     fileName: string
     fileSize: number
     merges?: MergeRange[]
-    headerMerges?: MergeRange[]
   }
   onBack: () => void
   userId: string
@@ -72,8 +70,9 @@ function calculateAutoFormat(headers: string[], rows: any[][]) {
 }
 
 export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) {
-  const [headers, setHeaders] = useState<string[]>(data.headers)
-  const [rows, setRows] = useState<any[][]>(data.rows)
+  const [allData, setAllData] = useState<any[][]>(data.allData)
+  const headers = allData[0] || []
+  const rows = allData.slice(1)
   const [editingCell, setEditingCell] = useState<{row: number, col: number} | null>(null)
   const [editValue, setEditValue] = useState('')
   const [saving, setSaving] = useState(false)
@@ -100,9 +99,9 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
   const saveEdit = () => {
     if (!editingCell) return
     
-    const newRows = [...rows]
-    newRows[editingCell.row][editingCell.col] = editValue
-    setRows(newRows)
+    const newAllData = [...allData]
+    newAllData[editingCell.row + 1][editingCell.col] = editValue
+    setAllData(newAllData)
     setEditingCell(null)
     setEditValue('')
   }
@@ -114,12 +113,12 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
 
   const addRow = () => {
     const newRow = new Array(headers.length).fill('')
-    setRows([...rows, newRow])
+    setAllData([...allData, newRow])
   }
 
   const deleteSelectedRows = () => {
     const newRows = rows.filter((_, index) => !selectedRows.has(index))
-    setRows(newRows)
+    setAllData([headers, ...newRows])
     setSelectedRows(new Set())
   }
 
@@ -204,12 +203,10 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
         .from('excel_data_raw')
         .insert({
           file_id: fileId,
-          headers: headers,
-          rows: rows,
+          all_data: allData,
           column_widths: columnWidths,
           row_heights: rowHeights,
           merges: data.merges || null,
-          header_merges: data.headerMerges || null,
         } as any)
 
       if (rawDataError) {

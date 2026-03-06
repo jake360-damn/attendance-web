@@ -223,12 +223,10 @@ export interface Database {
         Row: {
           id: string
           file_id: string
-          headers: string[]
-          rows: any
+          all_data: any
           column_widths: number[] | null
           row_heights: number[] | null
           merges: Json | null
-          header_merges: Json | null
           frozen_rows: number | null
           created_at: string
           updated_at: string
@@ -236,12 +234,10 @@ export interface Database {
         Insert: {
           id?: string
           file_id: string
-          headers: string[]
-          rows: any
+          all_data: any
           column_widths?: number[] | null
           row_heights?: number[] | null
           merges?: Json | null
-          header_merges?: Json | null
           frozen_rows?: number | null
           created_at?: string
           updated_at?: string
@@ -249,12 +245,10 @@ export interface Database {
         Update: {
           id?: string
           file_id?: string
-          headers?: string[]
-          rows?: any
+          all_data?: any
           column_widths?: number[] | null
           row_heights?: number[] | null
           merges?: Json | null
-          header_merges?: Json | null
           frozen_rows?: number | null
           created_at?: string
           updated_at?: string
