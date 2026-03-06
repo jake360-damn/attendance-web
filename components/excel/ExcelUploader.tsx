@@ -41,48 +41,20 @@ export default function ExcelUploader({ onUpload }: ExcelUploaderProps) {
           return
         }
 
-        const headers = jsonData[0] as string[]
-        const rows = jsonData.slice(1) as any[]
-
+        const allData = jsonData as any[]
+        
         const allMerges: MergeRange[] = worksheet['!merges'] || []
         
-        const headerMerges: MergeRange[] = []
-        const dataMerges: MergeRange[] = []
-        
-        allMerges.forEach(merge => {
-          if (merge.s.r === 0 && merge.e.r === 0) {
-            headerMerges.push({
-              s: { r: 0, c: merge.s.c },
-              e: { r: 0, c: merge.e.c }
-            })
-          } else if (merge.s.r === 0 && merge.e.r > 0) {
-            headerMerges.push({
-              s: { r: 0, c: merge.s.c },
-              e: { r: 0, c: merge.e.c }
-            })
-            dataMerges.push({
-              s: { r: 0, c: merge.s.c },
-              e: { r: merge.e.r - 1, c: merge.e.c }
-            })
-          } else {
-            dataMerges.push({
-              s: { r: merge.s.r - 1, c: merge.s.c },
-              e: { r: merge.e.r - 1, c: merge.e.c }
-            })
-          }
-        })
+        const adjustedMerges = allMerges.map(merge => ({
+          s: { r: merge.s.r, c: merge.s.c },
+          e: { r: merge.e.r, c: merge.e.c }
+        }))
 
-        console.log('Excel upload - headerMerges:', headerMerges)
-        console.log('Excel upload - dataMerges:', dataMerges)
-        console.log('Excel upload - allMerges:', allMerges)
-        
         onUpload({
-          headers,
-          rows,
+          allData,
           fileName: file.name,
           fileSize: file.size,
-          merges: dataMerges,
-          headerMerges,
+          merges: adjustedMerges,
         })
       } catch (err) {
         setError('解析文件失败，请检查文件格式')

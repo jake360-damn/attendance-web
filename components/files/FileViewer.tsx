@@ -43,8 +43,7 @@ interface FileViewerProps {
 }
 
 interface HistoryState {
-  rows: any[][]
-  headers: string[]
+  allData: any[][]
   columnWidths: number[]
   rowHeights: number[]
   merges: MergeRange[]
@@ -86,8 +85,9 @@ function calculateAutoFormat(headers: string[], rows: any[][]) {
 }
 
 export default function FileViewer({ file, currentUser, onBack, onViewHistory }: FileViewerProps) {
-  const [headers, setHeaders] = useState<string[]>([])
-  const [rows, setRows] = useState<any[][]>([])
+  const [allData, setAllData] = useState<any[][]>([])
+  const headers = allData[0] || []
+  const rows = allData.slice(1)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [editingCell, setEditingCell] = useState<{row: number, col: number} | null>(null)
@@ -105,7 +105,6 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
   const [columnWidths, setColumnWidths] = useState<number[]>([])
   const [rowHeights, setRowHeights] = useState<number[]>([])
   const [merges, setMerges] = useState<MergeRange[]>([])
-  const [headerMerges, setHeaderMerges] = useState<MergeRange[]>([])
   const [frozenRows, setFrozenRows] = useState<number>(0)
   const [showFreezeDialog, setShowFreezeDialog] = useState(false)
   const [resizingCol, setResizingCol] = useState<number | null>(null)
@@ -147,8 +146,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
   const undo = useCallback(() => {
     if (historyIndex > 0) {
       const prevState = history[historyIndex - 1]
-      setRows(prevState.rows)
-      setHeaders(prevState.headers)
+      setAllData(prevState.allData)
       setColumnWidths(prevState.columnWidths)
       setRowHeights(prevState.rowHeights)
       setMerges(prevState.merges)
@@ -159,8 +157,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
   const redo = useCallback(() => {
     if (historyIndex < history.length - 1) {
       const nextState = history[historyIndex + 1]
-      setRows(nextState.rows)
-      setHeaders(nextState.headers)
+      setAllData(nextState.allData)
       setColumnWidths(nextState.columnWidths)
       setRowHeights(nextState.rowHeights)
       setMerges(nextState.merges)
@@ -180,17 +177,14 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
         .single()
 
       if (rawData && !rawError) {
-        const loadedHeaders = rawData.headers || []
-        const loadedRows = rawData.rows || []
+        const loadedAllData: any[][] = rawData.all_data || []
+        const loadedHeaders = loadedAllData[0] || []
+        const loadedRows = loadedAllData.slice(1)
         
         let loadedColWidths = rawData.column_widths
         let loadedRowHeights = rawData.row_heights
         const loadedMerges: MergeRange[] = rawData.merges || []
-        const loadedHeaderMerges: MergeRange[] = rawData.header_merges || []
         const loadedFrozenRows = rawData.frozen_rows || 0
-        
-        console.log('FileViewer loaded - headerMerges:', loadedHeaderMerges)
-        console.log('FileViewer loaded - merges:', loadedMerges)
         
         if (!loadedColWidths || !loadedRowHeights) {
           const autoFormat = calculateAutoFormat(loadedHeaders, loadedRows)
@@ -198,18 +192,15 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
           loadedRowHeights = autoFormat.rowHeights
         }
         
-        setHeaders(loadedHeaders)
-        setRows(loadedRows)
+        setAllData(loadedAllData)
         setRawDataId(rawData.id)
         setColumnWidths(loadedColWidths)
         setRowHeights(loadedRowHeights)
         setMerges(loadedMerges)
-        setHeaderMerges(loadedHeaderMerges)
         setFrozenRows(loadedFrozenRows)
         
         const initialState: HistoryState = {
-          rows: loadedRows,
-          headers: loadedHeaders,
+          allData: loadedAllData,
           columnWidths: loadedColWidths,
           rowHeights: loadedRowHeights,
           merges: loadedMerges
@@ -236,17 +227,16 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
             record.notes || '',
           ])
           
+          const recordAllData = [recordHeaders, ...recordRows]
           const autoFormat = calculateAutoFormat(recordHeaders, recordRows)
           
-          setHeaders(recordHeaders)
-          setRows(recordRows)
+          setAllData(recordAllData)
           setColumnWidths(autoFormat.columnWidths)
           setRowHeights(autoFormat.rowHeights)
           setMerges([])
           
           const initialState: HistoryState = {
-            rows: recordRows,
-            headers: recordHeaders,
+            allData: recordAllData,
             columnWidths: autoFormat.columnWidths,
             rowHeights: autoFormat.rowHeights,
             merges: []
@@ -254,14 +244,12 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
           setHistory([initialState])
           setHistoryIndex(0)
         } else {
-          setHeaders([])
-          setRows([])
+          setAllData([])
         }
       }
     } catch (error) {
       console.error('获取文件数据失败:', error)
-      setHeaders([])
-      setRows([])
+      setAllData([])
     } finally {
       setLoading(false)
     }
@@ -291,15 +279,14 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
       return
     }
 
-    const newRows = [...rows]
-    newRows[row][col] = editValue
-    setRows(newRows)
+    const newAllData = [...allData]
+    newAllData[row + 1][col] = editValue
+    setAllData(newAllData)
     setEditingCell(null)
     setEditValue('')
     
     saveToHistory({
-      rows: newRows,
-      headers,
+      allData: newAllData,
       columnWidths,
       rowHeights,
       merges
@@ -309,7 +296,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
       try {
         await supabase
           .from('excel_data_raw')
-          .update({ rows: newRows })
+          .update({ all_data: newAllData })
           .eq('id', rawDataId)
 
         await supabase
@@ -339,13 +326,12 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
   const addRow = () => {
     if (!canEdit) return
     const newRow = new Array(headers.length).fill('')
-    const newRows = [...rows, newRow]
-    setRows(newRows)
+    const newAllData = [...allData, newRow]
+    setAllData(newAllData)
     setRowHeights([...rowHeights, DEFAULT_ROW_HEIGHT])
     
     saveToHistory({
-      rows: newRows,
-      headers,
+      allData: newAllData,
       columnWidths,
       rowHeights: [...rowHeights, DEFAULT_ROW_HEIGHT],
       merges
@@ -378,12 +364,13 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
     const deletedRowIndices = Array.from(selectedRows).sort((a, b) => a - b)
     const newRows = rows.filter((_, index) => !selectedRows.has(index))
     const newRowHeights = rowHeights.filter((_, index) => !selectedRows.has(index))
+    const newAllData = [headers, ...newRows]
     
     setSavingChanges(true)
     try {
       await supabase
         .from('excel_data_raw')
-        .update({ rows: newRows, row_heights: newRowHeights })
+        .update({ all_data: newAllData, row_heights: newRowHeights })
         .eq('id', rawDataId)
 
       await supabase
@@ -395,13 +382,12 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
           description: `删除了 ${deletedRowIndices.length} 行数据（原第 ${deletedRowIndices.map(i => i + 1).join(', ')} 行）`,
         })
 
-      setRows(newRows)
+      setAllData(newAllData)
       setRowHeights(newRowHeights)
       setSelectedRows(new Set())
       
       saveToHistory({
-        rows: newRows,
-        headers,
+        allData: newAllData,
         columnWidths,
         rowHeights: newRowHeights,
         merges
@@ -422,11 +408,10 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
       await supabase
         .from('excel_data_raw')
         .update({ 
-          rows: rows,
+          all_data: allData,
           row_heights: rowHeights,
           column_widths: columnWidths,
           merges: merges,
-          header_merges: headerMerges,
           frozen_rows: frozenRows,
           updated_at: new Date().toISOString()
         })
@@ -514,8 +499,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
     const handleMouseUp = () => {
       if (resizingCol !== null || resizingRow !== null) {
         saveToHistory({
-          rows,
-          headers,
+          allData,
           columnWidths,
           rowHeights,
           merges
@@ -548,7 +532,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
       return Math.max(maxWidth, MIN_COLUMN_WIDTH)
     })
 
-    const newRowHeights = rows.map((row, rowIndex) => {
+    const newRowHeights = allData.map((row, rowIndex) => {
       let maxHeight = DEFAULT_ROW_HEIGHT
       row.forEach((cell, colIndex) => {
         const cellValue = String(cell || '')
@@ -566,8 +550,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
     setRowHeights(newRowHeights)
     
     saveToHistory({
-      rows,
-      headers,
+      allData,
       columnWidths: newColWidths,
       rowHeights: newRowHeights,
       merges
@@ -576,14 +559,13 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
 
   const resetFormat = () => {
     const newColWidths = headers.map(() => DEFAULT_COLUMN_WIDTH)
-    const newRowHeights = rows.map(() => DEFAULT_ROW_HEIGHT)
+    const newRowHeights = allData.map(() => DEFAULT_ROW_HEIGHT)
     
     setColumnWidths(newColWidths)
     setRowHeights(newRowHeights)
     
     saveToHistory({
-      rows,
-      headers,
+      allData,
       columnWidths: newColWidths,
       rowHeights: newRowHeights,
       merges
@@ -607,22 +589,6 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
       }
     }
     return { isMerged: false, isStart: false, rowSpan: 1, colSpan: 1, shouldHide: false }
-  }
-
-  const getHeaderMergeInfo = (colIndex: number) => {
-    for (const merge of headerMerges) {
-      if (colIndex >= merge.s.c && colIndex <= merge.e.c) {
-        const isStart = colIndex === merge.s.c
-        const colSpan = merge.e.c - merge.s.c + 1
-        return {
-          isMerged: true,
-          isStart,
-          colSpan: isStart ? colSpan : 0,
-          shouldHide: !isStart
-        }
-      }
-    }
-    return { isMerged: false, isStart: false, colSpan: 1, shouldHide: false }
   }
 
   const getSelectedCellRange = () => {
@@ -688,8 +654,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
     setSelectedCells(new Set())
     
     saveToHistory({
-      rows,
-      headers,
+      allData,
       columnWidths,
       rowHeights,
       merges: newMerges
@@ -710,8 +675,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
     setSelectedCells(new Set())
     
     saveToHistory({
-      rows,
-      headers,
+      allData,
       columnWidths,
       rowHeights,
       merges: newMerges
@@ -793,30 +757,10 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
   }
 
   const exportExcel = () => {
-    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows])
-    
-    const allMerges: MergeRange[] = []
-    
-    if (headerMerges.length > 0) {
-      headerMerges.forEach(m => {
-        allMerges.push({
-          s: { r: 0, c: m.s.c },
-          e: { r: 0, c: m.e.c }
-        })
-      })
-    }
+    const worksheet = XLSX.utils.aoa_to_sheet(allData)
     
     if (merges.length > 0) {
-      merges.forEach(m => {
-        allMerges.push({
-          s: { r: m.s.r + 1, c: m.s.c },
-          e: { r: m.e.r + 1, c: m.e.c }
-        })
-      })
-    }
-    
-    if (allMerges.length > 0) {
-      worksheet['!merges'] = allMerges
+      worksheet['!merges'] = merges
     }
     
     const workbook = XLSX.utils.book_new()
@@ -1052,64 +996,15 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
         </div>
       </div>
 
-      {headers.length > 0 ? (
+      {allData.length > 0 ? (
         <div className="table-container">
           <div className="overflow-auto max-h-[600px]" style={{ maxWidth: '100%' }}>
             <table className="w-full border-collapse" ref={tableRef} style={{ tableLayout: 'fixed' }}>
               <tbody>
-                <tr 
-                  className="bg-gradient-to-r from-gray-50 to-gray-100"
-                >
-                  {canEdit && (
-                    <th className="w-12 min-w-[48px] border-b border-r border-gray-200 px-2 py-2 bg-gray-50">
-                      <input
-                        type="checkbox"
-                        checked={selectedRows.size === filteredRows.length && filteredRows.length > 0}
-                        onChange={toggleSelectAll}
-                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                    </th>
-                  )}
-                  <th className="w-16 min-w-[64px] border-b border-r border-gray-200 px-2 py-2 bg-gray-50 font-semibold text-gray-600">
-                    #
-                  </th>
-                  {headers.map((header, index) => {
-                    const headerMergeInfo = getHeaderMergeInfo(index)
-                    
-                    if (headerMergeInfo.shouldHide) {
-                      return null
-                    }
-                    
-                    return (
-                      <th
-                        key={index}
-                        className={`border-b border-r border-gray-200 px-3 py-2 bg-gray-50 font-semibold text-gray-600 relative select-none ${
-                          headerMergeInfo.isMerged ? 'bg-blue-100 text-blue-800 border-blue-300' : ''
-                        }`}
-                        style={{ 
-                          width: headerMergeInfo.isMerged 
-                            ? columnWidths.slice(index, index + headerMergeInfo.colSpan).reduce((a, b) => a + b, 0)
-                            : (columnWidths[index] || DEFAULT_COLUMN_WIDTH),
-                          minWidth: MIN_COLUMN_WIDTH
-                        }}
-                      >
-                        <div className="truncate text-center">{header}</div>
-                        {canEdit && (
-                          <div
-                            className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 transition-colors group"
-                            onMouseDown={(e) => handleColMouseDown(e, index)}
-                          >
-                            <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-blue-400 opacity-0 group-hover:opacity-100 transition-opacity rounded" />
-                          </div>
-                        )}
-                      </th>
-                    )
-                  })}
-                  <th className="w-8 min-w-[32px] border-b border-gray-200 bg-gray-50" />
-                </tr>
-                {filteredRows.map((row, rowIndex) => {
+                {allData.map((row, rowIndex) => {
                   const isFrozen = isRowFrozen(rowIndex)
                   const rowStyle = getRowStyle(rowIndex)
+                  const isHeaderRow = rowIndex === 0
                   
                   return (
                     <tr 
@@ -1118,7 +1013,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                         selectedRows.has(rowIndex) ? 'bg-blue-50' : 'hover:bg-gray-50'
                       } ${resizingRow === rowIndex ? 'bg-blue-100' : ''} ${
                         isFrozen ? 'bg-gray-50' : ''
-                      }`}
+                      } ${isHeaderRow ? 'bg-gradient-to-r from-gray-50 to-gray-100' : ''}`}
                       style={{ 
                         height: rowHeights[rowIndex] || DEFAULT_ROW_HEIGHT,
                         ...rowStyle
@@ -1126,12 +1021,21 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                     >
                       {canEdit && (
                         <td className="border-r border-gray-200 px-2 py-2 text-center bg-gray-50/50">
-                          <input
-                            type="checkbox"
-                            checked={selectedRows.has(rowIndex)}
-                            onChange={() => toggleRowSelection(rowIndex)}
-                            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                          />
+                          {isHeaderRow ? (
+                            <input
+                              type="checkbox"
+                              checked={selectedRows.size === filteredRows.length && filteredRows.length > 0}
+                              onChange={toggleSelectAll}
+                              className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                          ) : (
+                            <input
+                              type="checkbox"
+                              checked={selectedRows.has(rowIndex - 1)}
+                              onChange={() => toggleRowSelection(rowIndex - 1)}
+                              className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                          )}
                         </td>
                       )}
                       <td className={`border-r border-gray-200 px-2 py-2 text-gray-400 font-medium text-center ${isFrozen ? 'bg-gray-100' : 'bg-gray-50/50'}`}>
@@ -1145,16 +1049,20 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                           return null
                         }
                         
+                        const CellTag = isHeaderRow ? 'th' : 'td'
+                        
                         return (
-                          <td
+                          <CellTag
                             key={colIndex}
                             className={`border-r border-gray-200 px-3 py-2 relative select-none ${
                               mergeInfo.isMerged ? 'bg-blue-50/50' : ''
                             } ${isSelected ? 'bg-blue-100 ring-2 ring-blue-400 ring-inset' : ''} ${
                               isFrozen ? 'bg-gray-50' : ''
-                            }`}
+                            } ${isHeaderRow ? 'bg-gray-50 font-semibold text-gray-600' : ''}`}
                             style={{ 
-                              width: columnWidths[colIndex] || DEFAULT_COLUMN_WIDTH,
+                              width: mergeInfo.isMerged && mergeInfo.colSpan > 1
+                                ? columnWidths.slice(colIndex, colIndex + mergeInfo.colSpan).reduce((a, b) => a + b, 0)
+                                : (columnWidths[colIndex] || DEFAULT_COLUMN_WIDTH),
                               minWidth: MIN_COLUMN_WIDTH
                             }}
                             rowSpan={mergeInfo.rowSpan > 1 ? mergeInfo.rowSpan : undefined}
@@ -1190,10 +1098,10 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                             ) : (
                               <div 
                                 className={`text-sm overflow-hidden transition-colors ${
-                                  canEdit 
+                                  canEdit && !isHeaderRow
                                     ? 'cursor-pointer hover:bg-amber-50 hover:text-amber-700 rounded px-1' 
                                     : 'cursor-default'
-                                } ${mergeInfo.isMerged ? 'font-medium text-blue-800' : ''}`}
+                                } ${mergeInfo.isMerged ? 'font-medium text-blue-800' : ''} ${isHeaderRow ? 'text-center' : ''}`}
                                 style={{ 
                                   maxHeight: mergeInfo.isMerged && mergeInfo.rowSpan > 1 
                                     ? (rowHeights.slice(rowIndex, rowIndex + mergeInfo.rowSpan).reduce((a, b) => a + b, 0)) 
@@ -1207,7 +1115,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                                 {(cell !== null && cell !== undefined && cell !== '') ? cell : '-'}
                               </div>
                             )}
-                          </td>
+                          </CellTag>
                         )
                       })}
                       <td className="relative">
