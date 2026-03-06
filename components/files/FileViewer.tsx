@@ -1054,9 +1054,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                       />
                     </td>
                   )}
-                  <td className="border-r border-gray-200 px-2 py-2 text-gray-400 font-medium text-center bg-gray-50/50">
-                    #
-                  </td>
+                  {/* 序号列已隐藏 - 用户有自己的序号列 */}
                   {headers.map((cell, colIndex) => {
                     const mergeInfo = getCellMergeInfo(0, colIndex)
                     if (mergeInfo.shouldHide) return null
@@ -1163,9 +1161,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                           />
                         </td>
                       )}
-                      <td className={`border-r border-gray-200 px-2 py-2 text-gray-400 font-medium text-center ${isFrozen ? 'bg-gray-100' : 'bg-gray-50/50'}`}>
-                        {filteredIndex + 1}
-                      </td>
+                      {/* 序号列已隐藏 - 用户有自己的序号列 */}
                       {row.map((cell, colIndex) => {
                         const mergeInfo = getCellMergeInfo(rowIndex, colIndex)
                         const isSelected = selectedCells.has(`${rowIndex},${colIndex}`)
