@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Topology Test</title>
+  <style>
+    body { margin: 0; padding: 0; }
+    #bg { width: 100vw; height: 100vh; }
+  </style>
+</head>
+<body>
+  <div id="bg"></div>
+  <script src="/three.min.js"></script>
+  <script src="/p5.min.js"></script>
+  <script src="/vanta.topology.min.js"></script>
+  <script>
+    console.log('THREE:', typeof THREE);
+    console.log('p5:', typeof p5);
+    console.log('VANTA:', typeof VANTA);
+    console.log('VANTA.TOPOLOGY:', typeof VANTA?.TOPOLOGY);
+
+    if (VANTA && VANTA.TOPOLOGY) {
+      VANTA.TOPOLOGY({
+        el: "#bg",
+        mouseControls: true,
+        touchControls: true,
+        gyroControls: false,
+        minHeight: 200.00,
+        minWidth: 200.00,
+        scale: 1.00,
+        scaleMobile: 1.00,
+        color: 0x3f82ff,
+        backgroundColor: 0xf8fafc
+      });
+      console.log('Topology initialized!');
+    } else {
+      console.error('VANTA.TOPOLOGY not available');
+    }
+  </script>
+</body>
+</html>
