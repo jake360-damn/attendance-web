@@ -289,7 +289,7 @@ export default function DashboardPage() {
               </div>
               <button
                 onClick={() => setViewMode('upload')}
-                className="btn"
+                className="btn-stars"
                 type="button"
               >
                 <strong>上传新文件</strong>

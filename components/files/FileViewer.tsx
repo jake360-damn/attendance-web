@@ -772,7 +772,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
       position: 'sticky' as const,
       top: topOffset,
       zIndex: 5,
-      backgroundColor: '#f9fafb'
+      backgroundColor: '#1f2937'
     }
   }
 
@@ -814,7 +814,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
 
   if (loading) {
     return (
-      <div className="card p-12">
+      <div className="bg-gray-800/60 backdrop-blur-md rounded-xl p-12 shadow-lg border border-gray-700/50">
         <Loading text="加载数据..." />
       </div>
     )
@@ -822,24 +822,24 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
 
   return (
     <div className="space-y-4 animate-fade-in">
-      <div className="card p-5">
+      <div className="bg-gray-800/60 backdrop-blur-md rounded-xl p-5 shadow-lg border border-gray-700/50">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
           <div className="flex items-center gap-3">
             <button
               onClick={onBack}
-              className="btn btn-ghost"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ease-in-out bg-gray-700/50 text-gray-300 hover:text-white hover:bg-gray-700"
             >
               <ArrowLeft className="w-4 h-4" />
               返回
             </button>
-            <div className="divider"></div>
+            <div className="w-px h-6 bg-gray-600"></div>
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
+              <div className="w-10 h-10 bg-gradient-to-br from-yellow-600 to-yellow-700 rounded-xl flex items-center justify-center shadow-lg shadow-yellow-600/30">
                 <FileSpreadsheet className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h2 className="font-semibold text-gray-900">{file.file_name}</h2>
-                <div className="flex items-center gap-2 text-sm text-gray-500">
+                <h2 className="font-semibold text-white">{file.file_name}</h2>
+                <div className="flex items-center gap-2 text-sm text-gray-400">
                   <Table className="w-3.5 h-3.5" />
                   <span>{rows.length} 行数据</span>
                 </div>
@@ -854,7 +854,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                   <button
                     onClick={undo}
                     disabled={historyIndex <= 0}
-                    className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="p-2 rounded-lg hover:bg-gray-700 text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     title="撤销 (Ctrl+Z)"
                   >
                     <Undo2 className="w-4 h-4" />
@@ -862,7 +862,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                   <button
                     onClick={redo}
                     disabled={historyIndex >= history.length - 1}
-                    className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="p-2 rounded-lg hover:bg-gray-700 text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     title="重做 (Ctrl+Y)"
                   >
                     <Redo2 className="w-4 h-4" />
@@ -870,7 +870,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                 </div>
                 <button
                   onClick={autoFormat}
-                  className="btn bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 shadow-lg shadow-purple-500/25"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 shadow-lg shadow-purple-600/25"
                   title="自动调整格式"
                 >
                   <Wand2 className="w-4 h-4" />
@@ -878,17 +878,17 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                 </button>
                 <button
                   onClick={resetFormat}
-                  className="btn btn-secondary"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 bg-gray-700 text-gray-200 hover:bg-gray-600"
                   title="重置为默认格式"
                 >
                   <Maximize2 className="w-4 h-4" />
                   重置格式
                 </button>
-                <div className="h-6 w-px bg-gray-200 mx-1" />
+                <div className="h-6 w-px bg-gray-600 mx-1" />
                 <button
                   onClick={mergeSelectedCells}
                   disabled={selectedCells.size < 2 || !isRectangularSelection()}
-                  className="btn btn-secondary disabled:opacity-50"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 bg-gray-700 text-gray-200 hover:bg-gray-600 disabled:opacity-50"
                   title="合并选中的单元格"
                 >
                   <Merge className="w-4 h-4" />
@@ -897,7 +897,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                 <button
                   onClick={unmergeSelectedCells}
                   disabled={getMergesInSelection().length === 0}
-                  className="btn btn-secondary disabled:opacity-50"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 bg-gray-700 text-gray-200 hover:bg-gray-600 disabled:opacity-50"
                   title="取消合并选中的单元格"
                 >
                   <Split className="w-4 h-4" />
@@ -905,10 +905,10 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                 </button>
                 {isAdmin && (
                   <>
-                    <div className="h-6 w-px bg-gray-200 mx-1" />
+                    <div className="h-6 w-px bg-gray-600 mx-1" />
                     <button
                       onClick={() => setShowFreezeDialog(true)}
-                      className={`btn ${frozenRows > 0 ? 'bg-blue-100 text-blue-700 border-blue-300' : 'btn-secondary'}`}
+                      className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${frozenRows > 0 ? 'bg-yellow-600/20 text-yellow-400 border border-yellow-600/50' : 'bg-gray-700 text-gray-200 hover:bg-gray-600'}`}
                       title="设置冻结行数"
                     >
                       <Snowflake className="w-4 h-4" />
@@ -916,10 +916,10 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                     </button>
                   </>
                 )}
-                <div className="h-6 w-px bg-gray-200 mx-1" />
+                <div className="h-6 w-px bg-gray-600 mx-1" />
                 <button
                   onClick={addRow}
-                  className="btn btn-primary"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-600/25"
                 >
                   <Plus className="w-4 h-4" />
                   添加行
@@ -928,7 +928,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                   <button
                     onClick={deleteSelectedRows}
                     disabled={savingChanges}
-                    className="btn btn-danger"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 bg-gradient-to-r from-red-600 to-red-700 text-white hover:from-red-700 hover:to-red-800 shadow-lg shadow-red-600/25"
                   >
                     <Trash2 className="w-4 h-4" />
                     删除选中 ({selectedRows.size})
@@ -937,14 +937,12 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                 <button
                   onClick={saveAllChanges}
                   disabled={savingChanges}
-                  className="btn bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700 shadow-lg shadow-indigo-500/25"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 bg-gradient-to-r from-indigo-600 to-purple-700 text-white hover:from-indigo-700 hover:to-purple-800 shadow-lg shadow-indigo-600/25"
                 >
                   {savingChanges ? (
-                    <svg className="w-4 h-4 pl-btn" viewBox="0 0 128 128" fill="none">
-                      <circle className="pl__ring pl__ring--a" cx="64" cy="64" r="56" strokeWidth="12" fill="none" />
-                      <circle className="pl__ring pl__ring--b" cx="64" cy="64" r="56" strokeWidth="12" fill="none" />
-                      <circle className="pl__ring pl__ring--c" cx="64" cy="64" r="56" strokeWidth="12" fill="none" />
-                      <circle className="pl__ring pl__ring--d" cx="64" cy="64" r="56" strokeWidth="12" fill="none" />
+                    <svg className="w-4 h-4 animate-spin" viewBox="0 0 128 128" fill="none">
+                      <circle className="opacity-25" cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="12" />
+                      <path className="opacity-75" fill="currentColor" d="M64 8a56 56 0 0 1 56 56h-12a44 44 0 0 0-44-44V8z" />
                     </svg>
                   ) : (
                     <Save className="w-4 h-4" />
@@ -955,14 +953,14 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
             )}
             <button
               onClick={onViewHistory}
-              className="btn btn-secondary"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 bg-gray-700 text-gray-200 hover:bg-gray-600"
             >
               <Clock className="w-4 h-4" />
               修改历史
             </button>
             <button
               onClick={exportExcel}
-              className="btn btn-success"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white hover:from-emerald-700 hover:to-emerald-800 shadow-lg shadow-emerald-600/25"
             >
               <Download className="w-4 h-4" />
               导出
@@ -971,14 +969,12 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
               <button
                 onClick={toggleShare}
                 disabled={saving}
-                className={isShared ? "btn btn-warning" : "btn btn-primary"}
+                className={isShared ? "inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 bg-gradient-to-r from-orange-600 to-orange-700 text-white hover:from-orange-700 hover:to-orange-800 shadow-lg shadow-orange-600/25" : "inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-600/25"}
               >
                 {saving ? (
-                  <svg className="w-4 h-4 pl-btn" viewBox="0 0 128 128" fill="none">
-                    <circle className="pl__ring pl__ring--a" cx="64" cy="64" r="56" strokeWidth="12" fill="none" />
-                    <circle className="pl__ring pl__ring--b" cx="64" cy="64" r="56" strokeWidth="12" fill="none" />
-                    <circle className="pl__ring pl__ring--c" cx="64" cy="64" r="56" strokeWidth="12" fill="none" />
-                    <circle className="pl__ring pl__ring--d" cx="64" cy="64" r="56" strokeWidth="12" fill="none" />
+                  <svg className="w-4 h-4 animate-spin" viewBox="0 0 128 128" fill="none">
+                    <circle className="opacity-25" cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="12" />
+                    <path className="opacity-75" fill="currentColor" d="M64 8a56 56 0 0 1 56 56h-12a44 44 0 0 0-44-44V8z" />
                   </svg>
                 ) : isShared ? (
                   <Lock className="w-4 h-4" />
@@ -999,14 +995,14 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
               placeholder="搜索数据..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="input input-icon"
+              className="w-full pl-10 pr-4 py-2 bg-gray-900/50 border border-gray-600 rounded-lg text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-500/50 focus:border-yellow-500/50 transition-all"
             />
           </div>
           <div className="flex items-center gap-3">
-            <div className="text-sm text-gray-500">
+            <div className="text-sm text-gray-400">
               {searchTerm ? (
                 <span className="flex items-center gap-2">
-                  <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full font-medium">
+                  <span className="px-2 py-1 bg-yellow-600/20 text-yellow-400 rounded-full font-medium border border-yellow-600/30">
                     显示 {filteredRows.length} / {rows.length} 行
                   </span>
                 </span>
@@ -1017,18 +1013,18 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
             {searchTerm && (
               <button
                 onClick={() => setSearchTerm('')}
-                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                className="text-sm text-yellow-400 hover:text-yellow-300 font-medium"
               >
                 清除搜索
               </button>
             )}
             {isShared ? (
-              <span className="badge badge-success">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-600/20 text-emerald-400 rounded-full text-xs font-medium border border-emerald-600/30">
                 <Share2 className="w-3 h-3" />
                 已共享
               </span>
             ) : (
-              <span className="badge badge-muted">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-700 text-gray-400 rounded-full text-xs font-medium border border-gray-600">
                 <Lock className="w-3 h-3" />
                 私有
               </span>
@@ -1038,25 +1034,25 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
       </div>
 
       {allData.length > 0 ? (
-        <div className="table-container">
+        <div className="bg-gray-800/60 backdrop-blur-md rounded-xl shadow-lg border border-gray-700/50 overflow-hidden">
           <div className="overflow-auto max-h-[600px]" style={{ maxWidth: '100%' }}>
             <table className="w-full border-collapse" ref={tableRef} style={{ tableLayout: 'fixed' }}>
               <tbody>
                 {/* 表头行 - 始终显示 */}
                 <tr 
-                  className="border-b border-gray-100 transition-colors bg-gradient-to-r from-gray-50 to-gray-100"
+                  className="border-b border-gray-600 transition-colors bg-gradient-to-r from-gray-800 to-gray-700"
                   style={{ 
                     height: rowHeights[0] || DEFAULT_ROW_HEIGHT,
                     ...(isRowFrozen(0) ? getRowStyle(0) : {})
                   }}
                 >
                   {canEdit && (
-                    <td className="border-r border-gray-200 px-2 py-2 text-center bg-gray-50/50">
+                    <td className="border-r border-gray-600 px-2 py-2 text-center bg-gray-800/50">
                       <input
                         type="checkbox"
                         checked={selectedRows.size === filteredRows.length && filteredRows.length > 0}
                         onChange={toggleSelectAll}
-                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        className="w-4 h-4 rounded border-gray-500 bg-gray-700 text-yellow-600 focus:ring-yellow-500/50"
                       />
                     </td>
                   )}
@@ -1067,8 +1063,8 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                     return (
                       <th
                         key={colIndex}
-                        className={`border-r border-gray-200 px-3 py-2 relative select-none bg-gray-50 font-semibold text-gray-600 ${
-                          mergeInfo.isMerged ? 'bg-blue-50/50' : ''
+                        className={`border-r border-gray-600 px-3 py-2 relative select-none bg-gray-800 font-semibold text-gray-300 ${
+                          mergeInfo.isMerged ? 'bg-yellow-600/10' : ''
                         }`}
                         style={{ 
                           width: mergeInfo.isMerged && mergeInfo.colSpan > 1
@@ -1085,7 +1081,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                       >
                         {canEdit && !mergeInfo.shouldHide && (
                           <div
-                            className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-blue-500 transition-colors z-20"
+                            className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-yellow-500 transition-colors z-20"
                             onMouseDown={(e) => {
                               e.stopPropagation()
                               handleColMouseDown(e, colIndex)
@@ -1094,30 +1090,30 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                           />
                         )}
                         {editingCell?.row === -1 && editingCell?.col === colIndex ? (
-                          <div className="flex items-center gap-1 absolute inset-0 bg-white z-10 p-1 shadow-lg border border-blue-300 rounded">
+                          <div className="flex items-center gap-1 absolute inset-0 bg-gray-800 z-10 p-1 shadow-lg border border-yellow-500/50 rounded">
                             <input
                               type="text"
                               value={editValue}
                               onChange={(e) => setEditValue(e.target.value)}
                               onKeyDown={handleKeyDown}
                               autoFocus
-                              className="flex-1 px-2 py-1 border-0 focus:outline-none text-sm"
+                              className="flex-1 px-2 py-1 border-0 focus:outline-none text-sm bg-gray-900 text-gray-200"
                             />
                             <button
                               onClick={(e) => { e.stopPropagation(); saveEdit(); }}
-                              className="p-1 text-green-600 hover:bg-green-50 rounded"
+                              className="p-1 text-emerald-400 hover:bg-emerald-600/20 rounded"
                             >
                               <Check className="w-4 h-4" />
                             </button>
                             <button
                               onClick={(e) => { e.stopPropagation(); cancelEdit(); }}
-                              className="p-1 text-red-600 hover:bg-red-50 rounded"
+                              className="p-1 text-red-400 hover:bg-red-600/20 rounded"
                             >
                               <XIcon className="w-4 h-4" />
                             </button>
                           </div>
                         ) : (
-                          <div className="text-sm overflow-hidden text-center cursor-pointer hover:bg-amber-50 hover:text-amber-700 rounded px-1 transition-colors">
+                          <div className="text-sm overflow-hidden text-center cursor-pointer hover:bg-yellow-600/20 hover:text-yellow-400 rounded px-1 transition-colors text-gray-300">
                             {cell || '-'}
                           </div>
                         )}
@@ -1127,7 +1123,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                   <td className="relative">
                     {canEdit && (
                       <div
-                        className="absolute left-0 right-0 bottom-0 h-2 cursor-row-resize hover:bg-blue-500 transition-colors z-20"
+                        className="absolute left-0 right-0 bottom-0 h-2 cursor-row-resize hover:bg-yellow-500 transition-colors z-20"
                         onMouseDown={(e) => {
                           e.stopPropagation()
                           handleRowMouseDown(e, 0)
@@ -1145,21 +1141,21 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                   return (
                     <tr 
                       key={`frozen-${index}`} 
-                      className={`border-b border-gray-100 transition-colors bg-gray-50 ${
-                        selectedRows.has(index) ? 'bg-blue-50' : ''
-                      } ${resizingRow === rowIndex ? 'bg-blue-100' : ''}`}
+                      className={`border-b border-gray-600 transition-colors bg-gray-800/80 ${
+                        selectedRows.has(index) ? 'bg-yellow-600/20' : ''
+                      } ${resizingRow === rowIndex ? 'bg-yellow-600/30' : ''}`}
                       style={{ 
                         height: rowHeights[rowIndex] || DEFAULT_ROW_HEIGHT,
                         ...rowStyle
                       }}
                     >
                       {canEdit && (
-                        <td className="border-r border-gray-200 px-2 py-2 text-center bg-gray-50/50">
+                        <td className="border-r border-gray-600 px-2 py-2 text-center bg-gray-800/50">
                           <input
                             type="checkbox"
                             checked={selectedRows.has(index)}
                             onChange={() => toggleRowSelection(index)}
-                            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            className="w-4 h-4 rounded border-gray-500 bg-gray-700 text-yellow-600 focus:ring-yellow-500/50"
                           />
                         </td>
                       )}
@@ -1175,9 +1171,9 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                         return (
                           <td
                             key={colIndex}
-                            className={`border-r border-gray-200 px-3 py-2 relative select-none ${
-                              mergeInfo.isMerged ? 'bg-blue-50/50' : ''
-                            } ${isSelected ? 'bg-blue-100 ring-2 ring-blue-400 ring-inset' : ''}`}
+                            className={`border-r border-gray-600 px-3 py-2 relative select-none ${
+                              mergeInfo.isMerged ? 'bg-yellow-600/10' : ''
+                            } ${isSelected ? 'bg-yellow-600/30 ring-2 ring-yellow-500/50 ring-inset' : ''}`}
                             style={{ 
                               width: mergeInfo.isMerged && mergeInfo.colSpan > 1
                                 ? columnWidths.slice(colIndex, colIndex + mergeInfo.colSpan).reduce((a, b) => a + b, 0)
@@ -1192,24 +1188,24 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                             onDoubleClick={() => startEdit(rowIndex, colIndex, cell)}
                           >
                             {editingCell?.row === rowIndex && editingCell?.col === colIndex ? (
-                              <div className="flex items-center gap-1 absolute inset-0 bg-white z-10 p-1 shadow-lg border border-blue-300 rounded">
+                              <div className="flex items-center gap-1 absolute inset-0 bg-gray-800 z-10 p-1 shadow-lg border border-yellow-500/50 rounded">
                                 <input
                                   type="text"
                                   value={editValue}
                                   onChange={(e) => setEditValue(e.target.value)}
                                   onKeyDown={handleKeyDown}
                                   autoFocus
-                                  className="flex-1 px-2 py-1 border-0 focus:outline-none text-sm"
+                                  className="flex-1 px-2 py-1 border-0 focus:outline-none text-sm bg-gray-900 text-gray-200"
                                 />
                                 <button
                                   onClick={(e) => { e.stopPropagation(); saveEdit(); }}
-                                  className="p-1 text-green-600 hover:bg-green-50 rounded"
+                                  className="p-1 text-emerald-400 hover:bg-emerald-600/20 rounded"
                                 >
                                   <Check className="w-4 h-4" />
                                 </button>
                                 <button
                                   onClick={(e) => { e.stopPropagation(); cancelEdit(); }}
-                                  className="p-1 text-red-600 hover:bg-red-50 rounded"
+                                  className="p-1 text-red-400 hover:bg-red-600/20 rounded"
                                 >
                                   <XIcon className="w-4 h-4" />
                                 </button>
@@ -1218,9 +1214,9 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                               <div 
                                 className={`text-sm overflow-hidden transition-colors ${
                                   canEdit
-                                    ? 'cursor-pointer hover:bg-amber-50 hover:text-amber-700 rounded px-1' 
+                                    ? 'cursor-pointer hover:bg-yellow-600/20 hover:text-yellow-400 rounded px-1' 
                                     : 'cursor-default'
-                                } ${mergeInfo.isMerged ? 'font-medium text-blue-800' : ''}`}
+                                } ${mergeInfo.isMerged ? 'font-medium text-yellow-400' : 'text-gray-300'}`}
                                 style={{ 
                                   maxHeight: mergeInfo.isMerged && mergeInfo.rowSpan > 1 
                                     ? (rowHeights.slice(rowIndex, rowIndex + mergeInfo.rowSpan).reduce((a, b) => a + b, 0)) 
@@ -1240,7 +1236,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                       <td className="relative">
                         {canEdit && (
                           <div
-                            className="absolute left-0 right-0 bottom-0 h-2 cursor-row-resize hover:bg-blue-500 transition-colors z-20"
+                            className="absolute left-0 right-0 bottom-0 h-2 cursor-row-resize hover:bg-yellow-500 transition-colors z-20"
                             onMouseDown={(e) => {
                               e.stopPropagation()
                               handleRowMouseDown(e, rowIndex)
@@ -1264,20 +1260,20 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                   return (
                     <tr 
                       key={filteredIndex} 
-                      className={`border-b border-gray-100 transition-colors ${
-                        selectedRows.has(originalIndex) ? 'bg-blue-50' : 'hover:bg-gray-50'
-                      } ${resizingRow === rowIndex ? 'bg-blue-100' : ''}`}
+                      className={`border-b border-gray-600 transition-colors ${
+                        selectedRows.has(originalIndex) ? 'bg-yellow-600/20' : 'hover:bg-gray-700/50'
+                      } ${resizingRow === rowIndex ? 'bg-yellow-600/30' : ''}`}
                       style={{ 
                         height: rowHeights[rowIndex] || DEFAULT_ROW_HEIGHT
                       }}
                     >
                       {canEdit && (
-                        <td className="border-r border-gray-200 px-2 py-2 text-center bg-gray-50/50">
+                        <td className="border-r border-gray-600 px-2 py-2 text-center bg-gray-800/50">
                           <input
                             type="checkbox"
                             checked={selectedRows.has(originalIndex)}
                             onChange={() => toggleRowSelection(originalIndex)}
-                            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            className="w-4 h-4 rounded border-gray-500 bg-gray-700 text-yellow-600 focus:ring-yellow-500/50"
                           />
                         </td>
                       )}
@@ -1293,9 +1289,9 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                         return (
                           <td
                             key={colIndex}
-                            className={`border-r border-gray-200 px-3 py-2 relative select-none ${
-                              mergeInfo.isMerged ? 'bg-blue-50/50' : ''
-                            } ${isSelected ? 'bg-blue-100 ring-2 ring-blue-400 ring-inset' : ''}`}
+                            className={`border-r border-gray-600 px-3 py-2 relative select-none ${
+                              mergeInfo.isMerged ? 'bg-yellow-600/10' : ''
+                            } ${isSelected ? 'bg-yellow-600/30 ring-2 ring-yellow-500/50 ring-inset' : ''}`}
                             style={{ 
                               width: mergeInfo.isMerged && mergeInfo.colSpan > 1
                                 ? columnWidths.slice(colIndex, colIndex + mergeInfo.colSpan).reduce((a, b) => a + b, 0)
@@ -1310,24 +1306,24 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                             onDoubleClick={() => startEdit(rowIndex, colIndex, cell)}
                           >
                             {editingCell?.row === rowIndex && editingCell?.col === colIndex ? (
-                              <div className="flex items-center gap-1 absolute inset-0 bg-white z-10 p-1 shadow-lg border border-blue-300 rounded">
+                              <div className="flex items-center gap-1 absolute inset-0 bg-gray-800 z-10 p-1 shadow-lg border border-yellow-500/50 rounded">
                                 <input
                                   type="text"
                                   value={editValue}
                                   onChange={(e) => setEditValue(e.target.value)}
                                   onKeyDown={handleKeyDown}
                                   autoFocus
-                                  className="flex-1 px-2 py-1 border-0 focus:outline-none text-sm"
+                                  className="flex-1 px-2 py-1 border-0 focus:outline-none text-sm bg-gray-900 text-gray-200"
                                 />
                                 <button
                                   onClick={(e) => { e.stopPropagation(); saveEdit(); }}
-                                  className="p-1 text-green-600 hover:bg-green-50 rounded"
+                                  className="p-1 text-emerald-400 hover:bg-emerald-600/20 rounded"
                                 >
                                   <Check className="w-4 h-4" />
                                 </button>
                                 <button
                                   onClick={(e) => { e.stopPropagation(); cancelEdit(); }}
-                                  className="p-1 text-red-600 hover:bg-red-50 rounded"
+                                  className="p-1 text-red-400 hover:bg-red-600/20 rounded"
                                 >
                                   <XIcon className="w-4 h-4" />
                                 </button>
@@ -1336,9 +1332,9 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                               <div 
                                 className={`text-sm overflow-hidden transition-colors ${
                                   canEdit
-                                    ? 'cursor-pointer hover:bg-amber-50 hover:text-amber-700 rounded px-1' 
+                                    ? 'cursor-pointer hover:bg-yellow-600/20 hover:text-yellow-400 rounded px-1' 
                                     : 'cursor-default'
-                                } ${mergeInfo.isMerged ? 'font-medium text-blue-800' : ''}`}
+                                } ${mergeInfo.isMerged ? 'font-medium text-yellow-400' : 'text-gray-300'}`}
                                 style={{ 
                                   maxHeight: mergeInfo.isMerged && mergeInfo.rowSpan > 1 
                                     ? (rowHeights.slice(rowIndex, rowIndex + mergeInfo.rowSpan).reduce((a, b) => a + b, 0)) 
@@ -1358,7 +1354,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                       <td className="relative">
                         {canEdit && (
                           <div
-                            className="absolute left-0 right-0 bottom-0 h-2 cursor-row-resize hover:bg-blue-500 transition-colors z-20"
+                            className="absolute left-0 right-0 bottom-0 h-2 cursor-row-resize hover:bg-yellow-500 transition-colors z-20"
                             onMouseDown={(e) => {
                               e.stopPropagation()
                               handleRowMouseDown(e, rowIndex)
@@ -1374,30 +1370,30 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
             </table>
           </div>
           {filteredRows.length === 0 && (
-            <div className="empty-state py-12">
-              <Search className="w-12 h-12 text-gray-300 mb-4" />
-              <p className="text-gray-500">没有找到匹配的数据</p>
+            <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+              <Search className="w-12 h-12 text-gray-600 mb-4" />
+              <p>没有找到匹配的数据</p>
             </div>
           )}
         </div>
       ) : (
-        <div className="card p-16">
-          <div className="empty-state">
-            <Info className="w-16 h-16 text-gray-300 mb-4" />
-            <p className="text-lg font-medium text-gray-900 mb-1">暂无数据</p>
+        <div className="bg-gray-800/60 backdrop-blur-md rounded-xl p-16 shadow-lg border border-gray-700/50">
+          <div className="flex flex-col items-center justify-center text-gray-400">
+            <Info className="w-16 h-16 text-gray-600 mb-4" />
+            <p className="text-lg font-medium text-gray-300 mb-1">暂无数据</p>
             <p className="text-gray-500">该文件没有任何数据</p>
           </div>
         </div>
       )}
 
-      <div className="card p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-100">
+      <div className="bg-gray-800/60 backdrop-blur-md rounded-xl p-4 shadow-lg border border-gray-700/50 bg-gradient-to-r from-gray-800/80 to-gray-700/80">
         <div className="flex items-start gap-3">
-          <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-            <Edit3 className="w-4 h-4 text-blue-600" />
+          <div className="w-8 h-8 bg-yellow-600/20 rounded-lg flex items-center justify-center flex-shrink-0 border border-yellow-600/30">
+            <Edit3 className="w-4 h-4 text-yellow-400" />
           </div>
           <div>
-            <p className="font-medium text-blue-900 mb-1">操作说明</p>
-            <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-blue-700">
+            <p className="font-medium text-gray-200 mb-1">操作说明</p>
+            <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-gray-400">
               {canEdit && (
                 <>
                   <span>拖动选择 - 选中多个单元格</span>
@@ -1407,26 +1403,26 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                   <span>拖动行底部 - 调整行高</span>
                   <span>Ctrl+Z - 撤销</span>
                   <span>Ctrl+Y - 重做</span>
-                  <span className="text-purple-600 font-medium">合并 - 合并选中的单元格</span>
-                  <span className="text-purple-600 font-medium">取消合并 - 拆分合并的单元格</span>
+                  <span className="text-yellow-400 font-medium">合并 - 合并选中的单元格</span>
+                  <span className="text-yellow-400 font-medium">取消合并 - 拆分合并的单元格</span>
                 </>
               )}
-              {isAdmin && <span className="text-purple-600 font-medium">管理员可控制文件共享状态</span>}
+              {isAdmin && <span className="text-yellow-400 font-medium">管理员可控制文件共享状态</span>}
             </div>
           </div>
         </div>
       </div>
 
       {showFreezeDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md animate-fade-in">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">设置冻结行数</h3>
-            <p className="text-sm text-gray-600 mb-4">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+          <div className="bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-md animate-fade-in border border-gray-700">
+            <h3 className="text-lg font-semibold text-gray-200 mb-4">设置冻结行数</h3>
+            <p className="text-sm text-gray-400 mb-4">
               冻结的行将在滚动时保持固定在顶部。表头行始终会显示。
             </p>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
                   冻结行数（不含表头）
                 </label>
                 <input
@@ -1435,7 +1431,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                   max={rows.length}
                   value={frozenRows}
                   onChange={(e) => setFrozenRows(Math.max(0, Math.min(rows.length, parseInt(e.target.value) || 0)))}
-                  className="input w-full"
+                  className="w-full px-3 py-2 bg-gray-900/50 border border-gray-600 rounded-lg text-gray-200 focus:outline-none focus:ring-2 focus:ring-yellow-500/50 focus:border-yellow-500/50 transition-all"
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   当前将冻结 {frozenRows} 行数据（滚动时会固定在表头下方）
@@ -1443,8 +1439,8 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
               </div>
               
               {frozenRows > 0 && (
-                <div className="bg-blue-50 rounded-lg p-3">
-                  <p className="text-sm text-blue-700">
+                <div className="bg-yellow-600/10 rounded-lg p-3 border border-yellow-600/30">
+                  <p className="text-sm text-yellow-400">
                     <Snowflake className="w-4 h-4 inline mr-1" />
                     冻结功能已启用，前 {frozenRows} 行数据将固定显示
                   </p>
@@ -1454,13 +1450,13 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setFrozenRows(0)}
-                  className="btn btn-secondary flex-1"
+                  className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 bg-gray-700 text-gray-200 hover:bg-gray-600"
                 >
                   取消冻结
                 </button>
                 <button
                   onClick={() => setShowFreezeDialog(false)}
-                  className="btn btn-primary flex-1"
+                  className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 bg-gradient-to-r from-yellow-600 to-yellow-700 text-white hover:from-yellow-700 hover:to-yellow-800 shadow-lg shadow-yellow-600/25"
                 >
                   确定
                 </button>

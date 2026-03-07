@@ -309,7 +309,7 @@ body {
 }
 
 /* From Uiverse.io by StealthWorm */
-.btn {
+.btn-stars {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -377,23 +377,23 @@ strong {
   background: rgba(142, 81, 234, 0.704);
 }
 
-.btn:hover #container-stars {
+.btn-stars:hover #container-stars {
   z-index: 1;
   background-color: #212121;
 }
 
-.btn:hover {
+.btn-stars:hover {
   transform: scale(1.1);
 }
 
-.btn:active {
+.btn-stars:active {
   border: double 4px #fe53bb;
   background-origin: border-box;
   background-clip: content-box, border-box;
   animation: none;
 }
 
-.btn:active .circle {
+.btn-stars:active .circle {
   background: #fe53bb;
 }
 
