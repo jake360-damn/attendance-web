@@ -3,6 +3,7 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  
   // 跳过静态生成时的错误页面
   typescript: {
     ignoreBuildErrors: false,
@@ -10,6 +11,16 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  
+  // 启用压缩减少传输
+  compress: true,
+  
+  // 生产环境优化 - 禁用 source map 减少构建时间
+  productionBrowserSourceMaps: false,
+  
+  // 优化打包
+  swcMinify: true,
+  
   async headers() {
     return [
       {
