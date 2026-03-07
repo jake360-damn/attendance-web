@@ -210,8 +210,8 @@ export default function LoginPage() {
       <div className="min-h-screen flex items-center justify-center p-4 overflow-x-hidden relative">
         <div ref={vantaRef} className="fixed inset-0 z-0" />
         
-        <div className="flex bg-white/60 backdrop-blur-lg rounded-[20px] overflow-hidden shadow-[0_30px_100px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.1)] max-w-[1000px] w-[95%] max-h-[85vh] relative z-10 animate-[slideUp_0.6s_ease]">
-          <div className="flex-1 flex justify-center items-center p-5 bg-[rgba(232,232,232,0.4)] relative max-[900px]:hidden">
+        <div className="flex bg-white/20 backdrop-blur-md rounded-[20px] overflow-hidden shadow-[0_30px_100px_rgba(0,0,0,0.3),0_0_0_1px_rgba(255,255,255,0.15)] max-w-[1000px] w-[95%] max-h-[85vh] relative z-10 animate-[slideUp_0.6s_ease]">
+          <div className="flex-1 flex justify-center items-center p-5 bg-[rgba(232,232,232,0.15)] relative max-[900px]:hidden">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(255,107,53,0.1)_0%,transparent_50%),radial-gradient(circle_at_70%_70%,rgba(123,44,191,0.1)_0%,transparent_50%)] pointer-events-none" />
             <svg className="w-full h-auto max-w-[400px] relative z-10" viewBox="0 0 400 280" width="400" height="280">
               <defs>
@@ -283,7 +283,7 @@ export default function LoginPage() {
             </svg>
           </div>
           
-          <div className="flex-1 bg-gradient-to-br from-[#2B2D42] to-[#3D405B] p-6 md:p-8 lg:p-10 relative flex flex-col justify-center">
+          <div className="flex-1 bg-gradient-to-br from-[#2B2D42]/90 to-[#3D405B]/90 p-6 md:p-8 lg:p-10 relative flex flex-col justify-center backdrop-blur-sm">
             <div className="max-w-[350px] mx-auto relative z-10 w-full">
               <div className="flex justify-center mb-3">
                 <svg id="logo-svg" viewBox="0 0 100 100" width="50" height="50">
