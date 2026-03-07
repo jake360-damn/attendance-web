@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // 输出 standalone 模式，适合 Docker 部署
+  output: 'standalone',
+  
   images: {
     unoptimized: true,
   },
