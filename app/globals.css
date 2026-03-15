@@ -695,16 +695,8 @@ strong {
   }
 }
 
-.custom-cursor * {
+html, body, *, *::before, *::after {
   cursor: none !important;
-}
-
-html {
-  cursor: none;
-}
-
-* {
-  cursor: none;
 }
 
 .custom-cursor {
@@ -720,7 +712,6 @@ html {
   box-shadow: 
     0 0 10px rgba(90, 140, 220, 0.4),
     0 0 20px rgba(232, 93, 154, 0.2);
-  transition: width 0.15s ease, height 0.15s ease;
 }
 
 .cursor-trail {
@@ -734,11 +725,6 @@ html {
   transform-origin: center center;
   will-change: transform, left, top;
   opacity: 0.5;
-}
-
-.custom-cursor.hover {
-  width: 40px;
-  height: 40px;
 }
 
 .custom-cursor.click {

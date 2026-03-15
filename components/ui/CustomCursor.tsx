@@ -65,47 +65,6 @@ export default function CustomCursor() {
       cursor.classList.remove('click')
     }
 
-    const addHoverListeners = (el: Element) => {
-      el.addEventListener('mouseenter', () => cursor.classList.add('hover'))
-      el.addEventListener('mouseleave', () => cursor.classList.remove('hover'))
-    }
-
-    const removeHoverListeners = (el: Element) => {
-      el.removeEventListener('mouseenter', () => cursor.classList.add('hover'))
-      el.removeEventListener('mouseleave', () => cursor.classList.remove('hover'))
-    }
-
-    const hoverSelector = 'a, button, [role="button"], input, textarea, select, .hoverable'
-    const hoverElements = document.querySelectorAll(hoverSelector)
-    hoverElements.forEach(addHoverListeners)
-
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        mutation.addedNodes.forEach((node) => {
-          if (node.nodeType === 1) {
-            const el = node as Element
-            if (el.matches && el.matches(hoverSelector)) {
-              addHoverListeners(el)
-            }
-            const children = el.querySelectorAll ? el.querySelectorAll(hoverSelector) : []
-            children.forEach(addHoverListeners)
-          }
-        })
-        mutation.removedNodes.forEach((node) => {
-          if (node.nodeType === 1) {
-            const el = node as Element
-            if (el.matches && el.matches(hoverSelector)) {
-              removeHoverListeners(el)
-            }
-            const children = el.querySelectorAll ? el.querySelectorAll(hoverSelector) : []
-            children.forEach(removeHoverListeners)
-          }
-        })
-      })
-    })
-
-    observer.observe(document.body, { childList: true, subtree: true })
-
     const calculatePhysics = (deltaTime: number) => {
       const state = stateRef.current
       const dt = Math.min(deltaTime / 16.67, 3)
@@ -240,8 +199,6 @@ export default function CustomCursor() {
       document.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('mousedown', handleMouseDown)
       document.removeEventListener('mouseup', handleMouseUp)
-      hoverElements.forEach(removeHoverListeners)
-      observer.disconnect()
       cancelAnimationFrame(animationRef.current)
     }
   }, [])
