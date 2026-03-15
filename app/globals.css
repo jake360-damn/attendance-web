@@ -694,3 +694,54 @@ strong {
     stroke-dashoffset: -440;
   }
 }
+
+.custom-cursor * {
+  cursor: none !important;
+}
+
+html {
+  cursor: none;
+}
+
+* {
+  cursor: none;
+}
+
+.custom-cursor {
+  position: fixed;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4a90d9 0%, #5b7cfa 30%, #e85d9a 70%, #f06c9b 100%);
+  pointer-events: none;
+  z-index: 9999;
+  transform-origin: center center;
+  will-change: transform, left, top;
+  box-shadow: 
+    0 0 10px rgba(90, 140, 220, 0.4),
+    0 0 20px rgba(232, 93, 154, 0.2);
+  transition: width 0.15s ease, height 0.15s ease;
+}
+
+.cursor-trail {
+  position: fixed;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(74, 144, 217, 0.6) 0%, rgba(232, 93, 154, 0.6) 100%);
+  pointer-events: none;
+  z-index: 9998;
+  transform-origin: center center;
+  will-change: transform, left, top;
+  opacity: 0.5;
+}
+
+.custom-cursor.hover {
+  width: 40px;
+  height: 40px;
+}
+
+.custom-cursor.click {
+  width: 15px;
+  height: 15px;
+}
