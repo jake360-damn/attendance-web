@@ -10,17 +10,14 @@ import FileViewer from '@/components/files/FileViewer'
 import EditHistoryModal from '@/components/files/EditHistoryModal'
 import GlobalHistoryModal from '@/components/files/GlobalHistoryModal'
 import Loading from '@/components/ui/Loading'
+import StaggeredMenu, { MenuItem } from '@/components/ui/StaggeredMenu'
 import { User, SharedFile } from '@/types'
 import { 
-  LogOut, 
-  User as UserIcon, 
-  FileSpreadsheet, 
   FolderOpen,
   Upload,
-  Shield,
-  Sparkles,
-  ChevronRight,
-  Clock
+  Clock,
+  Home,
+  FileSpreadsheet
 } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
@@ -121,10 +118,8 @@ export default function DashboardPage() {
       }
     }
     
-    // Try to initialize immediately
     if (initVanta()) return
     
-    // Wait for libraries and ref to be ready
     const checkLoaded = setInterval(() => {
       const currentRef = vantaRef.current
       if (window.VANTA && window.THREE && window.p5 && currentRef) {
@@ -182,6 +177,32 @@ export default function DashboardPage() {
 
   const isAdmin = user?.role === 'admin'
 
+  const menuItems: MenuItem[] = [
+    {
+      label: '文件列表',
+      link: '#files',
+      ariaLabel: '查看文件列表',
+      onClick: () => setViewMode('files')
+    },
+    {
+      label: '上传文件',
+      link: '#upload',
+      ariaLabel: '上传新文件',
+      onClick: () => setViewMode('upload')
+    },
+    ...(isAdmin ? [{
+      label: '全局历史',
+      link: '#history',
+      ariaLabel: '查看全局编辑历史',
+      onClick: () => setShowGlobalHistory(true)
+    }] : []),
+    {
+      label: '返回首页',
+      link: '/',
+      ariaLabel: '返回网站首页'
+    }
+  ]
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
@@ -198,174 +219,110 @@ export default function DashboardPage() {
         style={{ width: '100%', height: '100%' }}
       />
       
-      <div className="relative z-10">
-      <header className="sticky top-0 z-40 bg-gray-900/70 backdrop-blur-xl border-b border-gray-700/50 shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <div className="w-10 h-10 bg-gradient-to-br from-yellow-600 to-yellow-700 rounded-xl flex items-center justify-center shadow-lg shadow-yellow-600/30">
-                    <FileSpreadsheet className="w-5 h-5 text-white" />
-                  </div>
-                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-gray-800"></div>
+      <StaggeredMenu
+        position="right"
+        colors={['#1a1a2e', '#16213e', '#0f3460']}
+        items={menuItems}
+        displayItemNumbering={true}
+        accentColor="#fbbf24"
+        menuButtonColor="#e9e9ef"
+        openMenuButtonColor="#111"
+        changeMenuColorOnOpen={true}
+        isFixed={true}
+        closeOnClickAway={true}
+        onLogout={handleLogout}
+        userName={user?.full_name || user?.email}
+        isAdmin={isAdmin}
+      />
+
+      <div className="relative z-10 pt-20">
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">
+          {viewMode === 'files' && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="bg-gray-800/60 backdrop-blur-md rounded-xl px-6 py-4 shadow-lg border border-gray-700/50">
+                  <h2 className="text-2xl font-bold text-white">文件列表</h2>
+                  <p className="text-gray-400 mt-1">管理您的考勤文件</p>
                 </div>
-                <div>
-                  <h1 className="text-lg font-bold text-white">
-                    考勤管理系统
-                  </h1>
-                  <p className="text-xs text-gray-400">Attendance Management</p>
-                </div>
-              </div>
-              
-              <nav className="hidden md:flex items-center gap-1 bg-gray-800/50 p-1 rounded-xl">
-                <button
-                  onClick={() => setViewMode('files')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    viewMode === 'files' || viewMode === 'viewer'
-                      ? 'bg-gray-700 text-yellow-400 shadow-sm'
-                      : 'text-gray-300 hover:text-white hover:bg-gray-700/50'
-                  }`}
-                >
-                  <FolderOpen className="w-4 h-4" />
-                  文件列表
-                </button>
-                
                 <button
                   onClick={() => setViewMode('upload')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    viewMode === 'upload' || viewMode === 'editor'
-                      ? 'bg-gray-700 text-yellow-400 shadow-sm'
-                      : 'text-gray-300 hover:text-white hover:bg-gray-700/50'
-                  }`}
+                  className="btn-stars"
+                  type="button"
                 >
-                  <Upload className="w-4 h-4" />
-                  上传文件
+                  <strong>上传新文件</strong>
+                  <div id="container-stars">
+                    <div id="stars"></div>
+                  </div>
+                  <div id="glow">
+                    <div className="circle"></div>
+                    <div className="circle"></div>
+                  </div>
                 </button>
-              </nav>
-            </div>
-            
-            <div className="flex items-center gap-3">
-              {isAdmin && (
-                <>
-                  <button
-                    onClick={() => setShowGlobalHistory(true)}
-                    className="flex items-center gap-2 px-3 py-1.5 text-yellow-400 hover:text-yellow-300 hover:bg-gray-800/50 rounded-lg transition-all duration-200"
-                  >
-                    <Clock className="w-4 h-4" />
-                    <span className="text-sm font-medium hidden sm:inline">全局历史</span>
-                  </button>
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-yellow-600 to-yellow-700 text-white rounded-full text-xs font-medium shadow-lg shadow-yellow-600/30">
-                    <Shield className="w-3.5 h-3.5" />
-                    管理员
-                  </span>
-                </>
-              )}
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-800/70 rounded-full">
-                <div className="w-7 h-7 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-full flex items-center justify-center">
-                  <UserIcon className="w-3.5 h-3.5 text-white" />
-                </div>
-                <span className="text-sm font-medium text-gray-200">{user?.full_name || user?.email}</span>
               </div>
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-2 px-3 py-2 text-gray-400 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-all duration-200"
-              >
-                <LogOut className="w-4 h-4" />
-                <span className="text-sm font-medium hidden sm:inline">退出</span>
-              </button>
+              <div className="bg-gray-800/60 backdrop-blur-md rounded-xl shadow-lg border border-gray-700/50">
+                <FileList
+                  currentUser={user}
+                  onSelectFile={handleSelectFile}
+                  onViewHistory={handleViewHistory}
+                />
+              </div>
             </div>
-          </div>
-        </div>
-      </header>
+          )}
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">
-        {viewMode === 'files' && (
-          <div className="space-y-6 animate-fade-in">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="bg-gray-800/60 backdrop-blur-md rounded-xl px-6 py-4 shadow-lg border border-gray-700/50">
-                <h2 className="text-2xl font-bold text-white">文件列表</h2>
-                <p className="text-gray-400 mt-1">管理您的考勤文件</p>
+          {viewMode === 'upload' && !excelData && (
+            <div className="max-w-2xl mx-auto animate-fade-in">
+              <div className="bg-gray-800/60 backdrop-blur-md rounded-2xl p-8 shadow-lg border border-gray-700/50">
+                <div className="text-center mb-8">
+                  <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-yellow-600 to-yellow-700 rounded-2xl shadow-xl shadow-yellow-600/30 mb-4">
+                    <Upload className="w-8 h-8 text-white" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-white mb-2">
+                    上传考勤文件
+                  </h2>
+                  <p className="text-gray-400">
+                    支持 .xlsx 和 .xls 格式的 Excel 文件
+                  </p>
+                </div>
+                <ExcelUploader onUpload={handleExcelUpload} />
               </div>
-              <button
-                onClick={() => setViewMode('upload')}
-                className="btn-stars"
-                type="button"
-              >
-                <strong>上传新文件</strong>
-                <div id="container-stars">
-                  <div id="stars"></div>
-                </div>
-                <div id="glow">
-                  <div className="circle"></div>
-                  <div className="circle"></div>
-                </div>
-              </button>
             </div>
+          )}
+
+          {viewMode === 'editor' && excelData && (
             <div className="bg-gray-800/60 backdrop-blur-md rounded-xl shadow-lg border border-gray-700/50">
-              <FileList
-                currentUser={user}
-                onSelectFile={handleSelectFile}
-                onViewHistory={handleViewHistory}
+              <ExcelEditor
+                data={excelData}
+                onBack={handleBackFromEditor}
+                userId={userId}
               />
             </div>
-          </div>
-        )}
+          )}
 
-        {viewMode === 'upload' && !excelData && (
-          <div className="max-w-2xl mx-auto animate-fade-in">
-            <div className="bg-gray-800/60 backdrop-blur-md rounded-2xl p-8 shadow-lg border border-gray-700/50">
-              <div className="text-center mb-8">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-yellow-600 to-yellow-700 rounded-2xl shadow-xl shadow-yellow-600/30 mb-4">
-                  <Upload className="w-8 h-8 text-white" />
-                </div>
-                <h2 className="text-2xl font-bold text-white mb-2">
-                  上传考勤文件
-                </h2>
-                <p className="text-gray-400">
-                  支持 .xlsx 和 .xls 格式的 Excel 文件
-                </p>
-              </div>
-              <ExcelUploader onUpload={handleExcelUpload} />
+          {viewMode === 'viewer' && selectedFile && (
+            <div className="bg-gray-800/60 backdrop-blur-md rounded-xl shadow-lg border border-gray-700/50">
+              <FileViewer
+                file={selectedFile}
+                currentUser={user}
+                onBack={handleBackFromViewer}
+                onViewHistory={() => handleViewHistory(selectedFile.id)}
+              />
             </div>
-          </div>
+          )}
+        </main>
+
+        {historyFileId && (
+          <EditHistoryModal
+            fileId={historyFileId}
+            fileName={historyFileName}
+            onClose={handleCloseHistory}
+          />
         )}
 
-        {viewMode === 'editor' && excelData && (
-          <div className="bg-gray-800/60 backdrop-blur-md rounded-xl shadow-lg border border-gray-700/50">
-            <ExcelEditor
-              data={excelData}
-              onBack={handleBackFromEditor}
-              userId={userId}
-            />
-          </div>
+        {showGlobalHistory && (
+          <GlobalHistoryModal
+            onClose={() => setShowGlobalHistory(false)}
+          />
         )}
-
-        {viewMode === 'viewer' && selectedFile && (
-          <div className="bg-gray-800/60 backdrop-blur-md rounded-xl shadow-lg border border-gray-700/50">
-            <FileViewer
-              file={selectedFile}
-              currentUser={user}
-              onBack={handleBackFromViewer}
-              onViewHistory={() => handleViewHistory(selectedFile.id)}
-            />
-          </div>
-        )}
-      </main>
-
-      {historyFileId && (
-        <EditHistoryModal
-          fileId={historyFileId}
-          fileName={historyFileName}
-          onClose={handleCloseHistory}
-        />
-      )}
-
-      {showGlobalHistory && (
-        <GlobalHistoryModal
-          onClose={() => setShowGlobalHistory(false)}
-        />
-      )}
       </div>
     </div>
   )
