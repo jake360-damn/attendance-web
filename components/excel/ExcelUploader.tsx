@@ -75,33 +75,22 @@ function formatExcelDate(value: number, numFmt?: string): string {
   if (typeof value !== 'number') return String(value)
   
   const totalDays = Math.floor(value)
-  const fractionalDay = value - totalDays
-  
-  const excelEpoch = new Date(1899, 11, 30)
-  const datePart = new Date(excelEpoch.getTime() + totalDays * 24 * 60 * 60 * 1000)
-  
-  const totalMinutes = Math.round(fractionalDay * 24 * 60)
-  const hours = Math.floor(totalMinutes / 60)
-  const minutes = totalMinutes % 60
   
   if (totalDays === 0) {
-    const h = hours
-    const m = minutes.toString().padStart(2, '0')
-    return `${h}:${m}`
+    const totalMinutes = Math.round(value * 24 * 60)
+    const hours = Math.floor(totalMinutes / 60)
+    const minutes = (totalMinutes % 60).toString().padStart(2, '0')
+    return `${hours}:${minutes}`
   }
   
-  // 格式化为 "3月1日" 形式
-  const month = (datePart.getMonth() + 1)
-  const day = datePart.getDate()
+  const utcDays = totalDays - 25569
+  const utcTime = utcDays * 86400
+  const date = new Date(utcTime * 1000)
   
-  if (fractionalDay === 0) {
-    return `${month}月${day}日`
-  }
+  const month = date.getUTCMonth() + 1
+  const day = date.getUTCDate()
   
-  const h = hours.toString().padStart(2, '0')
-  const m = minutes.toString().padStart(2, '0')
-  
-  return `${month}月${day}日 ${h}:${m}`
+  return `${month}月${day}日`
 }
 
 function extractCellStyle(cell: XLSX.CellObject): CellStyle | undefined {
@@ -174,16 +163,9 @@ function processCellValue(cell: XLSX.CellObject | undefined): CellData {
   
   if (cell.t === 'd' && value instanceof Date) {
     isDateTime = true
-    const month = (value.getMonth() + 1)
-    const day = value.getDate()
-    const hours = value.getHours().toString().padStart(2, '0')
-    const minutes = value.getMinutes().toString().padStart(2, '0')
-    
-    if (hours === '00' && minutes === '00') {
-      value = `${month}月${day}日`
-    } else {
-      value = `${month}月${day}日 ${hours}:${minutes}`
-    }
+    const month = value.getUTCMonth() + 1
+    const day = value.getUTCDate()
+    value = `${month}月${day}日`
   } else if (cell.t === 'n' && typeof value === 'number') {
     if (isTimeFormat(numFmt)) {
       isDateTime = true

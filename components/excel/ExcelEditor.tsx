@@ -114,15 +114,6 @@ function getCellStyle(style: CellStyle | undefined, isHeader: boolean = false): 
     verticalAlign: 'middle',
   }
 
-  if (style?.alignment) {
-    if (style.alignment.horizontal) {
-      cellStyle.textAlign = style.alignment.horizontal as React.CSSProperties['textAlign']
-    }
-    if (style.alignment.vertical) {
-      cellStyle.verticalAlign = style.alignment.vertical as React.CSSProperties['verticalAlign']
-    }
-  }
-
   if (style?.font) {
     if (style.font.bold) cellStyle.fontWeight = 'bold'
     if (style.font.italic) cellStyle.fontStyle = 'italic'
