@@ -90,20 +90,18 @@ function formatExcelDate(value: number, numFmt?: string): string {
     return `${h}:${m}`
   }
   
+  // 格式化为 "3月1日" 形式
+  const month = (datePart.getMonth() + 1)
+  const day = datePart.getDate()
+  
   if (fractionalDay === 0) {
-    const year = datePart.getFullYear()
-    const month = (datePart.getMonth() + 1).toString().padStart(2, '0')
-    const day = datePart.getDate().toString().padStart(2, '0')
-    return `${year}-${month}-${day}`
+    return `${month}月${day}日`
   }
   
-  const year = datePart.getFullYear()
-  const month = (datePart.getMonth() + 1).toString().padStart(2, '0')
-  const day = datePart.getDate().toString().padStart(2, '0')
   const h = hours.toString().padStart(2, '0')
   const m = minutes.toString().padStart(2, '0')
   
-  return `${year}-${month}-${day} ${h}:${m}`
+  return `${month}月${day}日 ${h}:${m}`
 }
 
 function extractCellStyle(cell: XLSX.CellObject): CellStyle | undefined {
@@ -176,16 +174,15 @@ function processCellValue(cell: XLSX.CellObject | undefined): CellData {
   
   if (cell.t === 'd' && value instanceof Date) {
     isDateTime = true
-    const year = value.getFullYear()
-    const month = (value.getMonth() + 1).toString().padStart(2, '0')
-    const day = value.getDate().toString().padStart(2, '0')
+    const month = (value.getMonth() + 1)
+    const day = value.getDate()
     const hours = value.getHours().toString().padStart(2, '0')
     const minutes = value.getMinutes().toString().padStart(2, '0')
     
     if (hours === '00' && minutes === '00') {
-      value = `${year}-${month}-${day}`
+      value = `${month}月${day}日`
     } else {
-      value = `${year}-${month}-${day} ${hours}:${minutes}`
+      value = `${month}月${day}日 ${hours}:${minutes}`
     }
   } else if (cell.t === 'n' && typeof value === 'number') {
     if (isTimeFormat(numFmt)) {
