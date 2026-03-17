@@ -23,12 +23,45 @@ interface MergeRange {
   e: { r: number; c: number }
 }
 
+interface CellStyle {
+  alignment?: {
+    horizontal?: string
+    vertical?: string
+    wrapText?: boolean
+  }
+  border?: {
+    top?: { style: string }
+    bottom?: { style: string }
+    left?: { style: string }
+    right?: { style: string }
+    diagonal?: { style: string; up?: boolean; down?: boolean }
+  }
+  font?: {
+    bold?: boolean
+    italic?: boolean
+    size?: number
+  }
+  fill?: {
+    fgColor?: { rgb?: string }
+  }
+  numFmt?: string
+}
+
+interface CellData {
+  value: any
+  style?: CellStyle
+  isDateTime?: boolean
+  originalFormat?: string
+}
+
 interface ExcelEditorProps {
   data: {
     allData: any[][]
+    cellData?: CellData[][]
     fileName: string
     fileSize: number
     merges?: MergeRange[]
+    cellStyles?: { [key: string]: CellStyle }
   }
   onBack: () => void
   userId: string
@@ -69,8 +102,82 @@ function calculateAutoFormat(headers: string[], rows: any[][]) {
   return { columnWidths, rowHeights }
 }
 
+function hasDiagonalBorder(style: CellStyle | undefined): boolean {
+  if (!style?.border?.diagonal) return false
+  const diag = style.border.diagonal
+  return !!(diag.style && (diag.up || diag.down))
+}
+
+function getCellStyle(style: CellStyle | undefined, isHeader: boolean = false): React.CSSProperties {
+  const cellStyle: React.CSSProperties = {
+    textAlign: 'center',
+    verticalAlign: 'middle',
+  }
+
+  if (style?.alignment) {
+    if (style.alignment.horizontal) {
+      cellStyle.textAlign = style.alignment.horizontal as React.CSSProperties['textAlign']
+    }
+    if (style.alignment.vertical) {
+      cellStyle.verticalAlign = style.alignment.vertical as React.CSSProperties['verticalAlign']
+    }
+  }
+
+  if (style?.font) {
+    if (style.font.bold) cellStyle.fontWeight = 'bold'
+    if (style.font.italic) cellStyle.fontStyle = 'italic'
+    if (style.font.size) cellStyle.fontSize = style.font.size
+  }
+
+  if (style?.fill?.fgColor?.rgb) {
+    const color = style.fill.fgColor.rgb
+    if (color.length === 6 || color.length === 8) {
+      const hex = color.length === 8 ? color.slice(2) : color
+      cellStyle.backgroundColor = `#${hex}`
+    }
+  }
+
+  return cellStyle
+}
+
+function DiagonalCell({ style, children }: { style?: CellStyle; children: React.ReactNode }) {
+  if (!hasDiagonalBorder(style)) {
+    return <>{children}</>
+  }
+
+  const diag = style!.border!.diagonal!
+  const hasUp = diag.up
+  const hasDown = diag.down
+
+  return (
+    <div className="relative w-full h-full">
+      {hasDown && (
+        <div 
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: 'linear-gradient(to top right, transparent calc(50% - 0.5px), #666 calc(50%), transparent calc(50% + 0.5px))'
+          }}
+        />
+      )}
+      {hasUp && (
+        <div 
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: 'linear-gradient(to top left, transparent calc(50% - 0.5px), #666 calc(50%), transparent calc(50% + 0.5px))'
+          }}
+        />
+      )}
+      <div className="relative z-10">
+        {children}
+      </div>
+    </div>
+  )
+}
+
 export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) {
   const [allData, setAllData] = useState<any[][]>(data.allData)
+  const [cellData, setCellData] = useState<CellData[][]>(data.cellData || data.allData.map(row => row.map(v => ({ value: v }))))
+  const [cellStyles, setCellStyles] = useState<{ [key: string]: CellStyle }>(data.cellStyles || {})
   const headers = allData[0] || []
   const rows = allData.slice(1)
   const [editingCell, setEditingCell] = useState<{row: number, col: number} | null>(null)
@@ -90,6 +197,14 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
       String(cell).toLowerCase().includes(searchTerm.toLowerCase())
     )
   )
+
+  const getCellKey = (rowIndex: number, colIndex: number): string => {
+    return `${rowIndex + 1}-${colIndex}`
+  }
+
+  const getCellStyleByKey = (rowIndex: number, colIndex: number): CellStyle | undefined => {
+    return cellStyles[getCellKey(rowIndex, colIndex)]
+  }
 
   const startEdit = (rowIndex: number, colIndex: number, value: any) => {
     setEditingCell({ row: rowIndex, col: colIndex })
@@ -209,6 +324,7 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
           column_widths: columnWidths,
           row_heights: rowHeights,
           merges: data.merges || null,
+          cell_styles: cellStyles,
         } as any)
 
       if (rawDataError) {
@@ -237,6 +353,24 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
 
   const exportExcel = () => {
     const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows])
+    
+    Object.keys(cellStyles).forEach(key => {
+      const [rowStr, colStr] = key.split('-')
+      const row = parseInt(rowStr)
+      const col = parseInt(colStr)
+      const cellAddress = XLSX.utils.encode_cell({ r: row, c: col })
+      const style = cellStyles[key]
+      
+      if (!worksheet[cellAddress]) {
+        worksheet[cellAddress] = { t: 's', v: '' }
+      }
+      
+      if (style.alignment) {
+        worksheet[cellAddress].s = worksheet[cellAddress].s || {}
+        worksheet[cellAddress].s.alignment = style.alignment
+      }
+    })
+    
     const workbook = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1')
     XLSX.writeFile(workbook, fileName)
@@ -366,7 +500,7 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
           <table className="w-full">
             <thead className="table-header sticky top-0 z-10">
               <tr>
-                <th className="table-cell w-12">
+                <th className="table-cell w-12 text-center align-middle">
                   <input
                     type="checkbox"
                     checked={selectedRows.size === filteredRows.length && filteredRows.length > 0}
@@ -374,17 +508,23 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
                     className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
                 </th>
-                <th className="table-cell font-semibold text-gray-600 w-16">
+                <th className="table-cell font-semibold text-gray-600 w-16 text-center align-middle">
                   #
                 </th>
-                {headers.map((header, index) => (
-                  <th
-                    key={index}
-                    className="table-cell font-semibold text-gray-600"
-                  >
-                    {header}
-                  </th>
-                ))}
+                {headers.map((header, index) => {
+                  const style = getCellStyleByKey(0, index)
+                  return (
+                    <th
+                      key={index}
+                      className="table-cell font-semibold text-gray-600"
+                      style={getCellStyle(style, true)}
+                    >
+                      <DiagonalCell style={style}>
+                        {header}
+                      </DiagonalCell>
+                    </th>
+                  )
+                })}
               </tr>
             </thead>
             <tbody>
@@ -393,7 +533,7 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
                   key={rowIndex} 
                   className={`table-row ${selectedRows.has(rowIndex) ? 'bg-blue-50' : ''}`}
                 >
-                  <td className="table-cell">
+                  <td className="table-cell text-center align-middle">
                     <input
                       type="checkbox"
                       checked={selectedRows.has(rowIndex)}
@@ -401,45 +541,53 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
                       className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
                   </td>
-                  <td className="table-cell text-gray-400 font-medium">
+                  <td className="table-cell text-gray-400 font-medium text-center align-middle">
                     {rowIndex + 1}
                   </td>
-                  {row.map((cell, colIndex) => (
-                    <td
-                      key={colIndex}
-                      className="table-cell"
-                      onClick={() => startEdit(rowIndex, colIndex, cell)}
-                    >
-                      {editingCell?.row === rowIndex && editingCell?.col === colIndex ? (
-                        <div className="flex items-center gap-1">
-                          <input
-                            type="text"
-                            value={editValue}
-                            onChange={(e) => setEditValue(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                            autoFocus
-                            className="w-full px-2 py-1 border border-blue-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-sm"
-                          />
-                          <button
-                            onClick={(e) => { e.stopPropagation(); saveEdit(); }}
-                            className="p-1 text-green-600 hover:bg-green-50 rounded"
-                          >
-                            <Check className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); cancelEdit(); }}
-                            className="p-1 text-red-600 hover:bg-red-50 rounded"
-                          >
-                            <XIcon className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ) : (
-                        <span className="inline-block px-2 py-1 rounded cursor-pointer hover:bg-amber-50 hover:text-amber-700 transition-colors">
-                          {(cell !== null && cell !== undefined && cell !== '') ? cell : '-'}
-                        </span>
-                      )}
-                    </td>
-                  ))}
+                  {row.map((cell, colIndex) => {
+                    const style = getCellStyleByKey(rowIndex + 1, colIndex)
+                    const hasDiagonal = hasDiagonalBorder(style)
+                    
+                    return (
+                      <td
+                        key={colIndex}
+                        className="table-cell"
+                        style={getCellStyle(style)}
+                        onClick={() => startEdit(rowIndex, colIndex, cell)}
+                      >
+                        {editingCell?.row === rowIndex && editingCell?.col === colIndex ? (
+                          <div className="flex items-center gap-1 justify-center">
+                            <input
+                              type="text"
+                              value={editValue}
+                              onChange={(e) => setEditValue(e.target.value)}
+                              onKeyDown={handleKeyDown}
+                              autoFocus
+                              className="w-full px-2 py-1 border border-blue-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-sm text-center"
+                            />
+                            <button
+                              onClick={(e) => { e.stopPropagation(); saveEdit(); }}
+                              className="p-1 text-green-600 hover:bg-green-50 rounded"
+                            >
+                              <Check className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); cancelEdit(); }}
+                              className="p-1 text-red-600 hover:bg-red-50 rounded"
+                            >
+                              <XIcon className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <span className={`inline-block px-2 py-1 rounded cursor-pointer hover:bg-amber-50 hover:text-amber-700 transition-colors ${hasDiagonal ? 'min-w-[60px] min-h-[24px]' : ''}`}>
+                            <DiagonalCell style={style}>
+                              {(cell !== null && cell !== undefined && cell !== '') ? cell : '-'}
+                            </DiagonalCell>
+                          </span>
+                        )}
+                      </td>
+                    )
+                  })}
                 </tr>
               ))}
             </tbody>

@@ -5,17 +5,218 @@ import * as XLSX from 'xlsx'
 import Loading from '@/components/ui/Loading'
 import { Upload, FileSpreadsheet, AlertCircle, Cloud, FileCheck } from 'lucide-react'
 
-interface ExcelUploaderProps {
-  onUpload: (data: any) => void
-}
-
 interface MergeRange {
   s: { r: number; c: number }
   e: { r: number; c: number }
 }
 
+interface CellStyle {
+  alignment?: {
+    horizontal?: string
+    vertical?: string
+    wrapText?: boolean
+  }
+  border?: {
+    top?: { style: string }
+    bottom?: { style: string }
+    left?: { style: string }
+    right?: { style: string }
+    diagonal?: { style: string; up?: boolean; down?: boolean }
+  }
+  font?: {
+    bold?: boolean
+    italic?: boolean
+    size?: number
+  }
+  fill?: {
+    fgColor?: { rgb?: string }
+  }
+  numFmt?: string
+}
+
+interface CellData {
+  value: any
+  style?: CellStyle
+  isDateTime?: boolean
+  originalFormat?: string
+}
+
 interface ExcelUploaderProps {
   onUpload: (data: any) => void
+}
+
+function isDateFormat(numFmt: string | undefined): boolean {
+  if (!numFmt) return false
+  const lowerFmt = numFmt.toLowerCase()
+  return lowerFmt.includes('yyyy') || 
+         lowerFmt.includes('mm') || 
+         lowerFmt.includes('dd') || 
+         lowerFmt.includes('hh') ||
+         lowerFmt.includes('ss') ||
+         lowerFmt.includes('h:mm') ||
+         lowerFmt.includes(':mm') ||
+         lowerFmt.includes('am/pm') ||
+         lowerFmt.includes('上午') ||
+         lowerFmt.includes('下午')
+}
+
+function isTimeFormat(numFmt: string | undefined): boolean {
+  if (!numFmt) return false
+  const lowerFmt = numFmt.toLowerCase()
+  return lowerFmt.includes('h:mm') || 
+         lowerFmt.includes('hh:mm') ||
+         lowerFmt.includes('h:mm:ss') ||
+         lowerFmt.includes('hh:mm:ss') ||
+         lowerFmt.includes(':mm') ||
+         lowerFmt.includes('am/pm')
+}
+
+function formatExcelDate(value: number, numFmt?: string): string {
+  if (typeof value !== 'number') return String(value)
+  
+  const totalDays = Math.floor(value)
+  const fractionalDay = value - totalDays
+  
+  const excelEpoch = new Date(1899, 11, 30)
+  const datePart = new Date(excelEpoch.getTime() + totalDays * 24 * 60 * 60 * 1000)
+  
+  const totalMinutes = Math.round(fractionalDay * 24 * 60)
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+  
+  if (totalDays === 0) {
+    const h = hours
+    const m = minutes.toString().padStart(2, '0')
+    return `${h}:${m}`
+  }
+  
+  if (fractionalDay === 0) {
+    const year = datePart.getFullYear()
+    const month = (datePart.getMonth() + 1).toString().padStart(2, '0')
+    const day = datePart.getDate().toString().padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+  
+  const year = datePart.getFullYear()
+  const month = (datePart.getMonth() + 1).toString().padStart(2, '0')
+  const day = datePart.getDate().toString().padStart(2, '0')
+  const h = hours.toString().padStart(2, '0')
+  const m = minutes.toString().padStart(2, '0')
+  
+  return `${year}-${month}-${day} ${h}:${m}`
+}
+
+function extractCellStyle(cell: XLSX.CellObject): CellStyle | undefined {
+  const style: CellStyle = {}
+  let hasStyle = false
+  
+  if (cell.s) {
+    const s = cell.s as any
+    
+    if (s.alignment) {
+      style.alignment = {
+        horizontal: s.alignment.horizontal,
+        vertical: s.alignment.vertical,
+        wrapText: s.alignment.wrapText
+      }
+      hasStyle = true
+    }
+    
+    if (s.border) {
+      style.border = {}
+      if (s.border.top) style.border.top = { style: s.border.top.style }
+      if (s.border.bottom) style.border.bottom = { style: s.border.bottom.style }
+      if (s.border.left) style.border.left = { style: s.border.left.style }
+      if (s.border.right) style.border.right = { style: s.border.right.style }
+      if (s.border.diagonal) {
+        style.border.diagonal = {
+          style: s.border.diagonal.style,
+          up: s.border.diagonal.up,
+          down: s.border.diagonal.down
+        }
+      }
+      hasStyle = true
+    }
+    
+    if (s.font) {
+      style.font = {
+        bold: s.font.bold,
+        italic: s.font.italic,
+        size: s.font.sz
+      }
+      hasStyle = true
+    }
+    
+    if (s.fill && s.fill.fgColor) {
+      style.fill = {
+        fgColor: { rgb: s.fill.fgColor.rgb }
+      }
+      hasStyle = true
+    }
+  }
+  
+  if (cell.z !== undefined) {
+    style.numFmt = String(cell.z)
+    hasStyle = true
+  }
+  
+  return hasStyle ? style : undefined
+}
+
+function processCellValue(cell: XLSX.CellObject | undefined): CellData {
+  if (!cell) {
+    return { value: '' }
+  }
+  
+  const style = extractCellStyle(cell)
+  const numFmt = cell.z !== undefined ? String(cell.z) : undefined
+  let value: any = cell.v
+  let isDateTime = false
+  let originalFormat = numFmt
+  
+  if (cell.t === 'd' && value instanceof Date) {
+    isDateTime = true
+    const year = value.getFullYear()
+    const month = (value.getMonth() + 1).toString().padStart(2, '0')
+    const day = value.getDate().toString().padStart(2, '0')
+    const hours = value.getHours().toString().padStart(2, '0')
+    const minutes = value.getMinutes().toString().padStart(2, '0')
+    
+    if (hours === '00' && minutes === '00') {
+      value = `${year}-${month}-${day}`
+    } else {
+      value = `${year}-${month}-${day} ${hours}:${minutes}`
+    }
+  } else if (cell.t === 'n' && typeof value === 'number') {
+    if (isTimeFormat(numFmt)) {
+      isDateTime = true
+      const totalMinutes = Math.round(value * 24 * 60)
+      const hours = Math.floor(totalMinutes / 60)
+      const minutes = (totalMinutes % 60).toString().padStart(2, '0')
+      value = `${hours}:${minutes}`
+    } else if (isDateFormat(numFmt)) {
+      isDateTime = true
+      value = formatExcelDate(value, numFmt)
+    }
+  } else if (cell.t === 'b') {
+    value = value ? '是' : '否'
+  } else if (cell.w !== undefined) {
+    if (isDateFormat(numFmt) || isTimeFormat(numFmt)) {
+      isDateTime = true
+    }
+    value = cell.w
+  }
+  
+  if (value === null || value === undefined) {
+    value = ''
+  }
+  
+  return {
+    value: String(value),
+    style,
+    isDateTime,
+    originalFormat
+  }
 }
 
 export default function ExcelUploader({ onUpload }: ExcelUploaderProps) {
@@ -32,18 +233,33 @@ export default function ExcelUploader({ onUpload }: ExcelUploaderProps) {
     reader.onload = (e) => {
       try {
         const data = e.target?.result
-        const workbook = XLSX.read(data, { type: 'binary' })
+        const workbook = XLSX.read(data, { 
+          type: 'binary',
+          cellDates: true,
+          cellStyles: true,
+          cellNF: true
+        })
         const sheetName = workbook.SheetNames[0]
         const worksheet = workbook.Sheets[sheetName]
-        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 })
+        
+        const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1')
+        const allData: CellData[][] = []
+        
+        for (let row = range.s.r; row <= range.e.r; row++) {
+          const rowData: CellData[] = []
+          for (let col = range.s.c; col <= range.e.c; col++) {
+            const cellAddress = XLSX.utils.encode_cell({ r: row, c: col })
+            const cell = worksheet[cellAddress]
+            rowData.push(processCellValue(cell))
+          }
+          allData.push(rowData)
+        }
 
-        if (jsonData.length === 0) {
+        if (allData.length === 0) {
           setError('文件为空')
           return
         }
 
-        const allData = jsonData as any[]
-        
         const allMerges: MergeRange[] = worksheet['!merges'] || []
         
         const adjustedMerges = allMerges.map(merge => ({
@@ -51,13 +267,29 @@ export default function ExcelUploader({ onUpload }: ExcelUploaderProps) {
           e: { r: merge.e.r, c: merge.e.c }
         }))
 
+        const simpleData = allData.map(row => 
+          row.map(cell => cell.value)
+        )
+        
+        const cellStyles: { [key: string]: CellStyle } = {}
+        allData.forEach((row, rowIndex) => {
+          row.forEach((cell, colIndex) => {
+            if (cell.style) {
+              cellStyles[`${rowIndex}-${colIndex}`] = cell.style
+            }
+          })
+        })
+
         onUpload({
-          allData,
+          allData: simpleData,
+          cellData: allData,
           fileName: file.name,
           fileSize: file.size,
           merges: adjustedMerges,
+          cellStyles,
         })
       } catch (err) {
+        console.error('解析文件错误:', err)
         setError('解析文件失败，请检查文件格式')
       } finally {
         setUploading(false)
@@ -205,6 +437,10 @@ export default function ExcelUploader({ onUpload }: ExcelUploaderProps) {
               <li className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 bg-blue-400 rounded-full"></span>
                 支持常见考勤字段：姓名、日期、上班时间、下班时间、状态等
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 bg-blue-400 rounded-full"></span>
+                自动识别时间格式并正确显示
               </li>
             </ul>
           </div>
