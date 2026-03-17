@@ -83,9 +83,8 @@ function formatExcelDate(value: number, numFmt?: string): string {
     return `${hours}:${minutes}`
   }
   
-  const utcDays = totalDays - 25569
-  const utcTime = utcDays * 86400
-  const date = new Date(utcTime * 1000)
+  const excelEpoch = new Date(Date.UTC(1899, 11, 30))
+  const date = new Date(excelEpoch.getTime() + totalDays * 24 * 60 * 60 * 1000)
   
   const month = date.getUTCMonth() + 1
   const day = date.getUTCDate()
@@ -166,6 +165,9 @@ function processCellValue(cell: XLSX.CellObject | undefined): CellData {
     const month = value.getUTCMonth() + 1
     const day = value.getUTCDate()
     value = `${month}月${day}日`
+  } else if (cell.w && isDateFormat(numFmt)) {
+    isDateTime = true
+    value = cell.w
   } else if (cell.t === 'n' && typeof value === 'number') {
     if (isTimeFormat(numFmt)) {
       isDateTime = true
