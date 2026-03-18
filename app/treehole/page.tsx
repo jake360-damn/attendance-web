@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@/lib/supabase'
-import { ArrowLeft, Send, User } from 'lucide-react'
+import { ArrowLeft, Send, User, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 
 interface Danmaku {
@@ -47,6 +47,7 @@ export default function TreeHolePage() {
   const [inputValue, setInputValue] = useState('')
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [videoLoading, setVideoLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -192,6 +193,14 @@ export default function TreeHolePage() {
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-black">
+      {videoLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black z-30">
+          <div className="text-center">
+            <Loader2 className="w-12 h-12 text-white animate-spin mx-auto mb-4" />
+            <p className="text-white/70">视频加载中...</p>
+          </div>
+        </div>
+      )}
       <video
         ref={videoRef}
         className="absolute inset-0 w-full h-full object-cover"
@@ -200,7 +209,8 @@ export default function TreeHolePage() {
         muted
         playsInline
         preload="auto"
-        poster="/video-poster.jpg"
+        onLoadedData={() => setVideoLoading(false)}
+        onCanPlay={() => setVideoLoading(false)}
       >
         <source src="/video.mp4" type="video/mp4" />
       </video>
