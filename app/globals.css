@@ -1143,3 +1143,16 @@ html, body, *, *::before, *::after {
     font-size: 0.8rem;
   }
 }
+
+@keyframes danmaku {
+  from {
+    transform: translateX(100vw);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+.animate-danmaku {
+  animation: danmaku linear forwards;
+}

@@ -190,6 +190,11 @@ export default function DashboardPage() {
       ariaLabel: '上传新文件',
       onClick: () => setViewMode('upload')
     },
+    {
+      label: '树洞',
+      link: '/treehole',
+      ariaLabel: '进入树洞'
+    },
     ...(isAdmin ? [{
       label: '全局历史',
       link: '#history',
