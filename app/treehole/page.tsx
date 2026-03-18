@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@/lib/supabase'
 import { ArrowLeft, Send, User, Loader2 } from 'lucide-react'
@@ -13,7 +13,7 @@ interface Danmaku {
   created_at: string
   color: string
   top: number
-  speed: number
+  duration: number
 }
 
 const COLORS = [
@@ -29,6 +29,9 @@ const COLORS = [
   '#00b894',
 ]
 
+const MAX_DISPLAY_COUNT = 10
+const DANMAKU_LIFETIME = 10 * 60 * 1000
+
 function getRandomColor() {
   return COLORS[Math.floor(Math.random() * COLORS.length)]
 }
@@ -37,8 +40,10 @@ function getRandomTop() {
   return Math.random() * 70 + 5
 }
 
-function getRandomSpeed() {
-  return Math.random() * 3 + 5
+function isDanmakuExpired(createdAt: string): boolean {
+  const created = new Date(createdAt).getTime()
+  const now = Date.now()
+  return now - created > DANMAKU_LIFETIME
 }
 
 export default function TreeHolePage() {
@@ -50,8 +55,8 @@ export default function TreeHolePage() {
   const [videoLoading, setVideoLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const animationRef = useRef<number>()
+  const displayIndexRef = useRef(0)
+  const intervalRef = useRef<NodeJS.Timeout | null>(null)
   const router = useRouter()
   const supabase = createBrowserClient()
 
@@ -69,17 +74,19 @@ export default function TreeHolePage() {
       const { data, error } = await supabase
         .from('treehole_danmakus')
         .select('*')
-        .order('created_at', { ascending: false })
-        .limit(100)
+        .order('created_at', { ascending: true })
+        .limit(500)
       
       if (data && !error) {
-        const formattedDanmakus = data.map((d: any) => ({
-          ...d,
-          color: getRandomColor(),
-          top: getRandomTop(),
-          speed: getRandomSpeed(),
-        }))
-        setDanmakus(formattedDanmakus)
+        const validDanmakus = data
+          .filter((d: any) => !isDanmakuExpired(d.created_at))
+          .map((d: any) => ({
+            ...d,
+            color: getRandomColor(),
+            top: getRandomTop(),
+            duration: Math.random() * 3 + 5,
+          }))
+        setDanmakus(validDanmakus)
       }
     }
     fetchDanmakus()
@@ -89,14 +96,15 @@ export default function TreeHolePage() {
       .on('postgres_changes', 
         { event: 'INSERT', schema: 'public', table: 'treehole_danmakus' },
         (payload: any) => {
-          const newDanmaku = {
-            ...payload.new as any,
-            color: getRandomColor(),
-            top: getRandomTop(),
-            speed: getRandomSpeed(),
+          if (!isDanmakuExpired(payload.new.created_at)) {
+            const newDanmaku: Danmaku = {
+              ...payload.new,
+              color: getRandomColor(),
+              top: getRandomTop(),
+              duration: Math.random() * 3 + 5,
+            }
+            setDanmakus(prev => [...prev, newDanmaku])
           }
-          setDanmakus(prev => [newDanmaku, ...prev])
-          setActiveDanmakus(prev => [...prev, newDanmaku])
         }
       )
       .subscribe()
@@ -107,37 +115,55 @@ export default function TreeHolePage() {
   }, [supabase])
 
   useEffect(() => {
-    if (danmakus.length > 0 && activeDanmakus.length === 0) {
-      const initialCount = Math.min(5, danmakus.length)
-      const initial = danmakus.slice(0, initialCount).map(d => ({
-        ...d,
-        top: getRandomTop(),
-        speed: getRandomSpeed(),
-      }))
-      setActiveDanmakus(initial)
+    if (danmakus.length === 0) {
+      setActiveDanmakus([])
+      return
     }
-  }, [danmakus, activeDanmakus.length])
+
+    const displayNextBatch = () => {
+      if (danmakus.length === 0) return
+
+      const startIdx = displayIndexRef.current
+      let count = 0
+      let batch: Danmaku[] = []
+
+      while (count < MAX_DISPLAY_COUNT && batch.length < MAX_DISPLAY_COUNT) {
+        const idx = (startIdx + count) % danmakus.length
+        const danmaku = {
+          ...danmakus[idx],
+          top: getRandomTop(),
+          duration: Math.random() * 3 + 5,
+        }
+        batch.push(danmaku)
+        count++
+        
+        if (idx === danmakus.length - 1) {
+          break
+        }
+      }
+
+      displayIndexRef.current = (startIdx + count) % danmakus.length
+      setActiveDanmakus(batch)
+    }
+
+    displayNextBatch()
+    intervalRef.current = setInterval(displayNextBatch, 3000)
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+      }
+    }
+  }, [danmakus])
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      if (danmakus.length > 0) {
-        const randomIndex = Math.floor(Math.random() * danmakus.length)
-        const newDanmaku = {
-          ...danmakus[randomIndex],
-          top: getRandomTop(),
-          speed: getRandomSpeed(),
-        }
-        setActiveDanmakus(prev => {
-          if (prev.length > 20) {
-            return [...prev.slice(-15), newDanmaku]
-          }
-          return [...prev, newDanmaku]
-        })
-      }
-    }, 2000)
+    const cleanup = setInterval(() => {
+      setDanmakus(prev => prev.filter(d => !isDanmakuExpired(d.created_at)))
+      setActiveDanmakus(prev => prev.filter(d => !isDanmakuExpired(d.created_at)))
+    }, 60000)
 
-    return () => clearInterval(interval)
-  }, [danmakus])
+    return () => clearInterval(cleanup)
+  }, [])
 
   useEffect(() => {
     if (videoRef.current) {
@@ -223,10 +249,7 @@ export default function TreeHolePage() {
 
       <div className="absolute inset-0 bg-black/30" />
 
-      <div 
-        ref={containerRef}
-        className="absolute inset-0 overflow-hidden pointer-events-none"
-      >
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {activeDanmakus.map((danmaku, index) => (
           <div
             key={`${danmaku.id}-${index}`}
@@ -234,7 +257,7 @@ export default function TreeHolePage() {
             style={{
               top: `${danmaku.top}%`,
               color: danmaku.color,
-              animationDuration: `${danmaku.speed}s`,
+              animationDuration: `${danmaku.duration}s`,
               textShadow: '2px 2px 4px rgba(0,0,0,0.8)',
             }}
           >
@@ -297,7 +320,7 @@ export default function TreeHolePage() {
           </form>
 
           <div className="mt-3 text-center text-white/50 text-xs">
-            已有 {danmakus.length} 条弹幕在飞翔
+            已有 {danmakus.length} 条弹幕，{activeDanmakus.length} 条正在显示
           </div>
         </div>
       </div>
