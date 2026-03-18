@@ -143,6 +143,10 @@ export default function TreeHolePage() {
     if (videoRef.current) {
       videoRef.current.play().catch(() => {})
     }
+    const timeout = setTimeout(() => {
+      setVideoLoading(false)
+    }, 5000)
+    return () => clearTimeout(timeout)
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -211,6 +215,8 @@ export default function TreeHolePage() {
         preload="auto"
         onLoadedData={() => setVideoLoading(false)}
         onCanPlay={() => setVideoLoading(false)}
+        onError={() => setVideoLoading(false)}
+        onLoadedMetadata={() => setVideoLoading(false)}
       >
         <source src="/video.mp4" type="video/mp4" />
       </video>
