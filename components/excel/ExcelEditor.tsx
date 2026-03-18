@@ -542,7 +542,7 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
                     return (
                       <td
                         key={colIndex}
-                        className="table-cell"
+                        className="table-cell text-center align-middle"
                         style={getCellStyle(style)}
                         onClick={() => startEdit(rowIndex, colIndex, cell)}
                       >
