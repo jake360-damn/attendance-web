@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@/lib/supabase'
-import { ArrowLeft, Send, User, Loader2 } from 'lucide-react'
+import { ArrowLeft, Send, User, Loader2, Eye, EyeOff } from 'lucide-react'
 import Link from 'next/link'
 
 interface Danmaku {
@@ -54,6 +54,7 @@ export default function TreeHolePage() {
   const [loading, setLoading] = useState(true)
   const [videoLoading, setVideoLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+  const [showDanmaku, setShowDanmaku] = useState(true)
   const videoRef = useRef<HTMLVideoElement>(null)
   const displayIndexRef = useRef(0)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
@@ -134,21 +135,20 @@ export default function TreeHolePage() {
     }
 
     const displayNextBatch = () => {
-      if (danmakus.length === 0) return
-
-      const batch: Danmaku[] = []
-      for (let i = 0; i < MAX_DISPLAY_COUNT; i++) {
-        const idx = (displayIndexRef.current + i) % danmakus.length
-        const danmaku = {
-          ...danmakus[idx],
-          top: getRandomTop(),
-          duration: Math.random() * 3 + 5,
-        }
-        batch.push(danmaku)
+      if (danmakus.length === 0) {
+        setActiveDanmakus([])
+        return
       }
 
-      displayIndexRef.current = (displayIndexRef.current + MAX_DISPLAY_COUNT) % danmakus.length
-      setActiveDanmakus(batch)
+      const danmaku = {
+        ...danmakus[displayIndexRef.current],
+        top: getRandomTop(),
+        duration: Math.random() * 3 + 5,
+      }
+
+      setActiveDanmakus([danmaku])
+
+      displayIndexRef.current = (displayIndexRef.current + 1) % danmakus.length
     }
 
     displayNextBatch()
@@ -255,7 +255,7 @@ export default function TreeHolePage() {
       <div className="absolute inset-0 bg-black/30" />
 
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {activeDanmakus.map((danmaku, index) => (
+        {showDanmaku && activeDanmakus.map((danmaku, index) => (
           <div
             key={`${danmaku.id}-${index}`}
             className="absolute whitespace-nowrap text-lg font-medium drop-shadow-lg animate-danmaku"
@@ -297,6 +297,23 @@ export default function TreeHolePage() {
         )}
       </div>
 
+      <button
+        onClick={() => setShowDanmaku(!showDanmaku)}
+        className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full text-white hover:bg-white/20 transition-colors"
+      >
+        {showDanmaku ? (
+          <>
+            <Eye className="w-4 h-4" />
+            <span className="text-sm">隐藏弹幕</span>
+          </>
+        ) : (
+          <>
+            <EyeOff className="w-4 h-4" />
+            <span className="text-sm">显示弹幕</span>
+          </>
+        )}
+      </button>
+
       <div className="absolute bottom-0 left-0 right-0 p-6 z-20">
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-4">
@@ -325,7 +342,7 @@ export default function TreeHolePage() {
           </form>
 
           <div className="mt-3 text-center text-white/50 text-xs">
-            已有 {danmakus.length} 条弹幕，{activeDanmakus.length} 条正在显示
+            已有 {danmakus.length} 条弹幕，第 {(displayIndexRef.current || 0) + 1} 条
           </div>
         </div>
       </div>
