@@ -46,7 +46,8 @@ function isDanmakuExpired(createdAt: string): boolean {
 
 export default function TreeHolePage() {
   const [danmakus, setDanmakus] = useState<Danmaku[]>([])
-  const [activeDanmakus, setActiveDanmakus] = useState<Danmaku[]>([])
+  const [activeDanmaku, setActiveDanmaku] = useState<Danmaku | null>(null)
+  const [currentIndex, setCurrentIndex] = useState(0)
   const [inputValue, setInputValue] = useState('')
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -54,7 +55,6 @@ export default function TreeHolePage() {
   const [submitting, setSubmitting] = useState(false)
   const [showDanmaku, setShowDanmaku] = useState(true)
   const videoRef = useRef<HTMLVideoElement>(null)
-  const displayIndexRef = useRef(0)
   const router = useRouter()
   const supabase = createBrowserClient()
 
@@ -123,23 +123,22 @@ export default function TreeHolePage() {
 
   useEffect(() => {
     if (danmakus.length === 0) {
-      setActiveDanmakus([])
+      setActiveDanmaku(null)
+      setCurrentIndex(0)
       return
     }
 
-    const firstDanmaku = {
+    setCurrentIndex(0)
+    setActiveDanmaku({
       ...danmakus[0],
       top: getRandomTop(),
       duration: Math.random() * 3 + 5,
-    }
-    displayIndexRef.current = 0
-    setActiveDanmakus([firstDanmaku])
+    })
   }, [danmakus])
 
   useEffect(() => {
     const cleanup = setInterval(() => {
       setDanmakus(prev => prev.filter(d => !isDanmakuExpired(d.created_at)))
-      setActiveDanmakus(prev => prev.filter(d => !isDanmakuExpired(d.created_at)))
     }, 60000)
 
     return () => clearInterval(cleanup)
@@ -230,32 +229,40 @@ export default function TreeHolePage() {
       <div className="absolute inset-0 bg-black/30" />
 
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {showDanmaku && activeDanmakus.map((danmaku) => (
+        {showDanmaku && activeDanmaku && (
           <div
-            key={danmaku.id}
+            key={`${activeDanmaku.id}-${currentIndex}`}
             className="absolute whitespace-nowrap text-lg font-medium drop-shadow-lg animate-danmaku"
             style={{
-              top: `${danmaku.top}%`,
-              color: danmaku.color,
-              animationDuration: `${danmaku.duration}s`,
+              top: `${activeDanmaku.top}%`,
+              color: activeDanmaku.color,
+              animationDuration: `${activeDanmaku.duration}s`,
               textShadow: '2px 2px 4px rgba(0,0,0,0.8)',
             }}
             onAnimationEnd={() => {
               if (danmakus.length > 0) {
-                const nextIdx = (displayIndexRef.current + 1) % danmakus.length
-                displayIndexRef.current = nextIdx
-                const nextDanmaku = {
-                  ...danmakus[nextIdx],
-                  top: getRandomTop(),
-                  duration: Math.random() * 3 + 5,
+                const nextIndex = currentIndex + 1
+                if (nextIndex >= danmakus.length) {
+                  setCurrentIndex(0)
+                  setActiveDanmaku({
+                    ...danmakus[0],
+                    top: getRandomTop(),
+                    duration: Math.random() * 3 + 5,
+                  })
+                } else {
+                  setCurrentIndex(nextIndex)
+                  setActiveDanmaku({
+                    ...danmakus[nextIndex],
+                    top: getRandomTop(),
+                    duration: Math.random() * 3 + 5,
+                  })
                 }
-                setActiveDanmakus([nextDanmaku])
               }
             }}
           >
-            {danmaku.content}
+            {activeDanmaku.content}
           </div>
-        ))}
+        )}
       </div>
 
       <div className="absolute top-4 left-4 z-20">
@@ -329,7 +336,7 @@ export default function TreeHolePage() {
           </form>
 
           <div className="mt-3 text-center text-white/50 text-xs">
-            已有 {danmakus.length} 条弹幕，第 {(displayIndexRef.current || 0) + 1} 条
+            已有 {danmakus.length} 条弹幕，第 {currentIndex + 1} 条
           </div>
         </div>
       </div>
