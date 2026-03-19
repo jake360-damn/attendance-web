@@ -54,6 +54,7 @@ export default function TreeHolePage() {
   const [videoLoading, setVideoLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [showDanmaku, setShowDanmaku] = useState(true)
+  const [isPlaying, setIsPlaying] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const router = useRouter()
   const supabase = createBrowserClient()
@@ -124,17 +125,20 @@ export default function TreeHolePage() {
   useEffect(() => {
     if (danmakus.length === 0) {
       setActiveDanmaku(null)
-      setCurrentIndex(0)
+      setIsPlaying(false)
       return
     }
 
-    setCurrentIndex(0)
-    setActiveDanmaku({
-      ...danmakus[0],
-      top: getRandomTop(),
-      duration: Math.random() * 3 + 5,
-    })
-  }, [danmakus])
+    if (!isPlaying) {
+      setIsPlaying(true)
+      setCurrentIndex(0)
+      setActiveDanmaku({
+        ...danmakus[0],
+        top: getRandomTop(),
+        duration: Math.random() * 3 + 5,
+      })
+    }
+  }, [danmakus, isPlaying])
 
   useEffect(() => {
     const cleanup = setInterval(() => {
