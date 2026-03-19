@@ -30,7 +30,6 @@ const COLORS = [
 ]
 
 const MAX_DISPLAY_COUNT = 10
-const DANMAKU_LIFETIME = 10 * 60 * 1000
 
 function getRandomColor() {
   return COLORS[Math.floor(Math.random() * COLORS.length)]
@@ -41,9 +40,10 @@ function getRandomTop() {
 }
 
 function isDanmakuExpired(createdAt: string): boolean {
-  const created = new Date(createdAt).getTime()
-  const now = Date.now()
-  return now - created > DANMAKU_LIFETIME
+  const created = new Date(createdAt)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return created < today
 }
 
 export default function TreeHolePage() {
@@ -136,26 +136,18 @@ export default function TreeHolePage() {
     const displayNextBatch = () => {
       if (danmakus.length === 0) return
 
-      const startIdx = displayIndexRef.current
-      let count = 0
-      let batch: Danmaku[] = []
-
-      while (count < MAX_DISPLAY_COUNT && batch.length < MAX_DISPLAY_COUNT) {
-        const idx = (startIdx + count) % danmakus.length
+      const batch: Danmaku[] = []
+      for (let i = 0; i < MAX_DISPLAY_COUNT; i++) {
+        const idx = (displayIndexRef.current + i) % danmakus.length
         const danmaku = {
           ...danmakus[idx],
           top: getRandomTop(),
           duration: Math.random() * 3 + 5,
         }
         batch.push(danmaku)
-        count++
-        
-        if (idx === danmakus.length - 1) {
-          break
-        }
       }
 
-      displayIndexRef.current = (startIdx + count) % danmakus.length
+      displayIndexRef.current = (displayIndexRef.current + MAX_DISPLAY_COUNT) % danmakus.length
       setActiveDanmakus(batch)
     }
 
