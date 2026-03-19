@@ -108,7 +108,7 @@ export default function TreeHolePage() {
           }
         }
       )
-      .subscribe((status) => {
+      .subscribe((status: any) => {
         console.log('Supabase channel status:', status)
       })
 
