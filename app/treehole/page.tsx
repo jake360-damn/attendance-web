@@ -91,11 +91,14 @@ export default function TreeHolePage() {
     }
     fetchDanmakus()
 
+    const pollInterval = setInterval(fetchDanmakus, 5000)
+
     const channel = supabase
-      .channel('treehole-danmakus')
+      .channel('treehole-danmakus-realtime')
       .on('postgres_changes', 
         { event: 'INSERT', schema: 'public', table: 'treehole_danmakus' },
         (payload: any) => {
+          console.log('Received realtime update:', payload)
           if (!isDanmakuExpired(payload.new.created_at)) {
             const newDanmaku: Danmaku = {
               ...payload.new,
@@ -103,8 +106,14 @@ export default function TreeHolePage() {
               top: getRandomTop(),
               duration: Math.random() * 3 + 5,
             }
-            setDanmakus(prev => [...prev, newDanmaku])
-            setActiveDanmakus(prev => [...prev, newDanmaku])
+            setDanmakus(prev => {
+              if (prev.some(d => d.id === newDanmaku.id)) return prev
+              return [...prev, newDanmaku]
+            })
+            setActiveDanmakus(prev => {
+              if (prev.some(d => d.id === newDanmaku.id)) return prev
+              return [...prev, newDanmaku]
+            })
           }
         }
       )
@@ -113,6 +122,7 @@ export default function TreeHolePage() {
       })
 
     return () => {
+      clearInterval(pollInterval)
       supabase.removeChannel(channel)
     }
   }, [supabase])
