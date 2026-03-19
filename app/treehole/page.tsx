@@ -111,10 +111,6 @@ export default function TreeHolePage() {
               if (prev.some(d => d.id === newDanmaku.id)) return prev
               return [...prev, newDanmaku]
             })
-            setActiveDanmakus(prev => {
-              if (prev.some(d => d.id === newDanmaku.id)) return prev
-              return [...prev, newDanmaku]
-            })
           }
         }
       )
