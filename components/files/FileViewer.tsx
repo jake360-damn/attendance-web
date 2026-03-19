@@ -1063,7 +1063,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                     return (
                       <th
                         key={colIndex}
-                        className={`border-r border-gray-600 px-3 py-2 relative select-none bg-gray-800 font-semibold text-gray-300 ${
+                        className={`border-r border-gray-600 px-3 py-2 relative select-none bg-gray-800 font-semibold text-gray-300 text-center align-middle ${
                           mergeInfo.isMerged ? 'bg-yellow-600/10' : ''
                         }`}
                         style={{ 
@@ -1097,7 +1097,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                               onChange={(e) => setEditValue(e.target.value)}
                               onKeyDown={handleKeyDown}
                               autoFocus
-                              className="flex-1 px-2 py-1 border-0 focus:outline-none text-sm bg-gray-900 text-gray-200"
+                              className="flex-1 px-2 py-1 border-0 focus:outline-none text-sm bg-gray-900 text-gray-200 text-center"
                             />
                             <button
                               onClick={(e) => { e.stopPropagation(); saveEdit(); }}
@@ -1171,7 +1171,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                         return (
                           <td
                             key={colIndex}
-                            className={`border-r border-gray-600 px-3 py-2 relative select-none ${
+                            className={`border-r border-gray-600 px-3 py-2 relative select-none text-center align-middle ${
                               mergeInfo.isMerged ? 'bg-yellow-600/10' : ''
                             } ${isSelected ? 'bg-yellow-600/30 ring-2 ring-yellow-500/50 ring-inset' : ''}`}
                             style={{ 
@@ -1195,7 +1195,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                                   onChange={(e) => setEditValue(e.target.value)}
                                   onKeyDown={handleKeyDown}
                                   autoFocus
-                                  className="flex-1 px-2 py-1 border-0 focus:outline-none text-sm bg-gray-900 text-gray-200"
+                                  className="flex-1 px-2 py-1 border-0 focus:outline-none text-sm bg-gray-900 text-gray-200 text-center"
                                 />
                                 <button
                                   onClick={(e) => { e.stopPropagation(); saveEdit(); }}
@@ -1289,7 +1289,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                         return (
                           <td
                             key={colIndex}
-                            className={`border-r border-gray-600 px-3 py-2 relative select-none ${
+                            className={`border-r border-gray-600 px-3 py-2 relative select-none text-center align-middle ${
                               mergeInfo.isMerged ? 'bg-yellow-600/10' : ''
                             } ${isSelected ? 'bg-yellow-600/30 ring-2 ring-yellow-500/50 ring-inset' : ''}`}
                             style={{ 
@@ -1313,7 +1313,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                                   onChange={(e) => setEditValue(e.target.value)}
                                   onKeyDown={handleKeyDown}
                                   autoFocus
-                                  className="flex-1 px-2 py-1 border-0 focus:outline-none text-sm bg-gray-900 text-gray-200"
+                                  className="flex-1 px-2 py-1 border-0 focus:outline-none text-sm bg-gray-900 text-gray-200 text-center"
                                 />
                                 <button
                                   onClick={(e) => { e.stopPropagation(); saveEdit(); }}

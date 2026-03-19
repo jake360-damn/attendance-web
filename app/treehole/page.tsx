@@ -104,10 +104,13 @@ export default function TreeHolePage() {
               duration: Math.random() * 3 + 5,
             }
             setDanmakus(prev => [...prev, newDanmaku])
+            setActiveDanmakus(prev => [...prev, newDanmaku])
           }
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        console.log('Supabase channel status:', status)
+      })
 
     return () => {
       supabase.removeChannel(channel)
