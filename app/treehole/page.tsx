@@ -29,8 +29,6 @@ const COLORS = [
   '#00b894',
 ]
 
-const MAX_DISPLAY_COUNT = 10
-
 function getRandomColor() {
   return COLORS[Math.floor(Math.random() * COLORS.length)]
 }
@@ -57,7 +55,6 @@ export default function TreeHolePage() {
   const [showDanmaku, setShowDanmaku] = useState(true)
   const videoRef = useRef<HTMLVideoElement>(null)
   const displayIndexRef = useRef(0)
-  const intervalRef = useRef<NodeJS.Timeout | null>(null)
   const router = useRouter()
   const supabase = createBrowserClient()
 
@@ -130,31 +127,13 @@ export default function TreeHolePage() {
       return
     }
 
-    const displayNextBatch = () => {
-      if (danmakus.length === 0) {
-        setActiveDanmakus([])
-        return
-      }
-
-      const danmaku = {
-        ...danmakus[displayIndexRef.current],
-        top: getRandomTop(),
-        duration: Math.random() * 3 + 5,
-      }
-
-      setActiveDanmakus([danmaku])
-
-      displayIndexRef.current = (displayIndexRef.current + 1) % danmakus.length
+    const firstDanmaku = {
+      ...danmakus[0],
+      top: getRandomTop(),
+      duration: Math.random() * 3 + 5,
     }
-
-    displayNextBatch()
-    intervalRef.current = setInterval(displayNextBatch, 3000)
-
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-      }
-    }
+    displayIndexRef.current = 0
+    setActiveDanmakus([firstDanmaku])
   }, [danmakus])
 
   useEffect(() => {
@@ -251,15 +230,27 @@ export default function TreeHolePage() {
       <div className="absolute inset-0 bg-black/30" />
 
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {showDanmaku && activeDanmakus.map((danmaku, index) => (
+        {showDanmaku && activeDanmakus.map((danmaku) => (
           <div
-            key={`${danmaku.id}-${index}`}
+            key={danmaku.id}
             className="absolute whitespace-nowrap text-lg font-medium drop-shadow-lg animate-danmaku"
             style={{
               top: `${danmaku.top}%`,
               color: danmaku.color,
               animationDuration: `${danmaku.duration}s`,
               textShadow: '2px 2px 4px rgba(0,0,0,0.8)',
+            }}
+            onAnimationEnd={() => {
+              if (danmakus.length > 0) {
+                const nextIdx = (displayIndexRef.current + 1) % danmakus.length
+                displayIndexRef.current = nextIdx
+                const nextDanmaku = {
+                  ...danmakus[nextIdx],
+                  top: getRandomTop(),
+                  duration: Math.random() * 3 + 5,
+                }
+                setActiveDanmakus([nextDanmaku])
+              }
             }}
           >
             {danmaku.content}
