@@ -507,7 +507,7 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
                   return (
                     <th
                       key={index}
-                      className="table-cell font-semibold text-gray-600"
+                      className="table-cell font-semibold text-gray-600 text-center align-middle"
                       style={getCellStyle(style, true)}
                     >
                       <DiagonalCell style={style}>
