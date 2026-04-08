@@ -197,8 +197,8 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
     return cellStyles[getCellKey(rowIndex, colIndex)]
   }
 
-  const startEdit = (rowIndex: number, colIndex: number, value: any) => {
-    setEditingCell({ row: rowIndex, col: colIndex })
+  const startEdit = (actualRowIndex: number, colIndex: number, value: any) => {
+    setEditingCell({ row: actualRowIndex, col: colIndex })
     setEditValue(String(value || ''))
   }
 
@@ -519,24 +519,26 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
               </tr>
             </thead>
             <tbody>
-              {filteredRows.map((row, rowIndex) => (
+              {filteredRows.map((row, filteredIndex) => {
+                const actualRowIndex = rows.findIndex(r => r === row)
+                return (
                 <tr 
-                  key={rowIndex} 
-                  className={`table-row ${selectedRows.has(rowIndex) ? 'bg-blue-50' : ''}`}
+                  key={actualRowIndex} 
+                  className={`table-row ${selectedRows.has(actualRowIndex) ? 'bg-blue-50' : ''}`}
                 >
                   <td className="table-cell text-center align-middle">
                     <input
                       type="checkbox"
-                      checked={selectedRows.has(rowIndex)}
-                      onChange={() => toggleRowSelection(rowIndex)}
+                      checked={selectedRows.has(actualRowIndex)}
+                      onChange={() => toggleRowSelection(actualRowIndex)}
                       className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
                   </td>
                   <td className="table-cell text-gray-400 font-medium text-center align-middle">
-                    {rowIndex + 1}
+                    {actualRowIndex + 1}
                   </td>
                   {row.map((cell, colIndex) => {
-                    const style = getCellStyleByKey(rowIndex + 1, colIndex)
+                    const style = getCellStyleByKey(actualRowIndex + 1, colIndex)
                     const hasDiagonal = hasDiagonalBorder(style)
                     
                     return (
@@ -544,9 +546,9 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
                         key={colIndex}
                         className="table-cell text-center align-middle"
                         style={getCellStyle(style)}
-                        onClick={() => startEdit(rowIndex, colIndex, cell)}
+                        onClick={() => startEdit(actualRowIndex, colIndex, cell)}
                       >
-                        {editingCell?.row === rowIndex && editingCell?.col === colIndex ? (
+                        {editingCell?.row === actualRowIndex && editingCell?.col === colIndex ? (
                           <div className="flex items-center gap-1 justify-center">
                             <input
                               type="text"
@@ -580,7 +582,7 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
                     )
                   })}
                 </tr>
-              ))}
+              )})}
             </tbody>
           </table>
         </div>
