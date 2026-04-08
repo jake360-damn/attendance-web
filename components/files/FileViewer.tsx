@@ -256,11 +256,13 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
     }
   }
 
-  const filteredRows = rows.filter(row => 
-    row.some(cell => 
-      String(cell).toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredRowsWithIndex = rows
+    .map((row, index) => ({ row, originalIndex: index }))
+    .filter(({ row }) => 
+      row.some(cell => 
+        String(cell).toLowerCase().includes(searchTerm.toLowerCase())
+      )
     )
-  )
 
   const startEdit = (rowIndex: number, colIndex: number, value: any) => {
     if (!canEdit) return
@@ -364,10 +366,10 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
 
   const toggleSelectAll = () => {
     if (!canEdit) return
-    if (selectedRows.size === filteredRows.length) {
+    if (selectedRows.size === filteredRowsWithIndex.length) {
       setSelectedRows(new Set())
     } else {
-      setSelectedRows(new Set(filteredRows.map((_, index) => index)))
+      setSelectedRows(new Set(filteredRowsWithIndex.map(({ originalIndex }) => originalIndex)))
     }
   }
 
@@ -1003,7 +1005,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
               {searchTerm ? (
                 <span className="flex items-center gap-2">
                   <span className="px-2 py-1 bg-yellow-600/20 text-yellow-400 rounded-full font-medium border border-yellow-600/30">
-                    显示 {filteredRows.length} / {rows.length} 行
+                    显示 {filteredRowsWithIndex.length} / {rows.length} 行
                   </span>
                 </span>
               ) : (
@@ -1050,7 +1052,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                     <td className="border-r border-gray-600 px-2 py-2 text-center bg-gray-800/50">
                       <input
                         type="checkbox"
-                        checked={selectedRows.size === filteredRows.length && filteredRows.length > 0}
+                        checked={selectedRows.size === filteredRowsWithIndex.length && filteredRowsWithIndex.length > 0}
                         onChange={toggleSelectAll}
                         className="w-4 h-4 rounded border-gray-500 bg-gray-700 text-yellow-600 focus:ring-yellow-500/50"
                       />
@@ -1249,17 +1251,15 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                   )
                 })}
                 {/* 数据行 - 根据搜索过滤（排除冻结行） */}
-                {filteredRows.filter(row => {
-                  const originalIndex = rows.indexOf(row)
+                {filteredRowsWithIndex.filter(({ originalIndex }) => {
                   const rowIndex = originalIndex + 1
                   return rowIndex > frozenRows
-                }).map((row, filteredIndex) => {
-                  const originalIndex = rows.indexOf(row)
+                }).map(({ row, originalIndex }) => {
                   const rowIndex = originalIndex + 1
                   
                   return (
                     <tr 
-                      key={filteredIndex} 
+                      key={originalIndex} 
                       className={`border-b border-gray-600 transition-colors ${
                         selectedRows.has(originalIndex) ? 'bg-yellow-600/20' : 'hover:bg-gray-700/50'
                       } ${resizingRow === rowIndex ? 'bg-yellow-600/30' : ''}`}
@@ -1303,9 +1303,9 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
                             onMouseDown={(e) => handleCellMouseDown(rowIndex, colIndex, e)}
                             onMouseEnter={() => handleCellMouseEnter(rowIndex, colIndex)}
                             onMouseUp={handleCellMouseUp}
-                            onDoubleClick={() => startEdit(rowIndex, colIndex, cell)}
+                            onDoubleClick={() => startEdit(originalIndex, colIndex, cell)}
                           >
-                            {editingCell?.row === rowIndex && editingCell?.col === colIndex ? (
+                            {editingCell?.row === originalIndex && editingCell?.col === colIndex ? (
                               <div className="flex items-center gap-1 absolute inset-0 bg-gray-800 z-10 p-1 shadow-lg border border-yellow-500/50 rounded">
                                 <input
                                   type="text"
@@ -1369,7 +1369,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
               </tbody>
             </table>
           </div>
-          {filteredRows.length === 0 && (
+          {filteredRowsWithIndex.length === 0 && (
             <div className="flex flex-col items-center justify-center py-12 text-gray-400">
               <Search className="w-12 h-12 text-gray-600 mb-4" />
               <p>没有找到匹配的数据</p>
