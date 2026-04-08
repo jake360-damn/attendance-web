@@ -206,7 +206,9 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
     if (!editingCell) return
     
     const newAllData = [...allData]
-    newAllData[editingCell.row + 1][editingCell.col] = editValue
+    // 强制保存到上一行（索引减1）
+    const targetRow = Math.max(0, editingCell.row - 1) + 1
+    newAllData[targetRow][editingCell.col] = editValue
     setAllData(newAllData)
     setEditingCell(null)
     setEditValue('')
