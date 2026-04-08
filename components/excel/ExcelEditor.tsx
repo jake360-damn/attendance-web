@@ -183,11 +183,13 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
     setSupabase(createBrowserClient())
   }, [])
 
-  const filteredRows = rows.filter(row => 
-    row.some(cell => 
-      String(cell).toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredRowsWithIndex = rows
+    .map((row, index) => ({ row, originalIndex: index }))
+    .filter(({ row }) => 
+      row.some(cell => 
+        String(cell).toLowerCase().includes(searchTerm.toLowerCase())
+      )
     )
-  )
 
   const getCellKey = (rowIndex: number, colIndex: number): string => {
     return `${rowIndex + 1}-${colIndex}`
@@ -206,9 +208,7 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
     if (!editingCell) return
     
     const newAllData = [...allData]
-    // 强制保存到上一行（索引减1）
-    const targetRow = Math.max(0, editingCell.row - 1) + 1
-    newAllData[targetRow][editingCell.col] = editValue
+    newAllData[editingCell.row + 1][editingCell.col] = editValue
     setAllData(newAllData)
     setEditingCell(null)
     setEditValue('')
@@ -241,10 +241,10 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
   }
 
   const toggleSelectAll = () => {
-    if (selectedRows.size === filteredRows.length) {
+    if (selectedRows.size === filteredRowsWithIndex.length) {
       setSelectedRows(new Set())
     } else {
-      setSelectedRows(new Set(filteredRows.map((_, index) => index)))
+      setSelectedRows(new Set(filteredRowsWithIndex.map(({ originalIndex }) => originalIndex)))
     }
   }
 
@@ -469,7 +469,7 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
               {searchTerm ? (
                 <span className="flex items-center gap-2">
                   <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full font-medium">
-                    显示 {filteredRows.length} / {rows.length} 行
+                    显示 {filteredRowsWithIndex.length} / {rows.length} 行
                   </span>
                 </span>
               ) : (
@@ -496,7 +496,7 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
                 <th className="table-cell w-12 text-center align-middle">
                   <input
                     type="checkbox"
-                    checked={selectedRows.size === filteredRows.length && filteredRows.length > 0}
+                    checked={selectedRows.size === filteredRowsWithIndex.length && filteredRowsWithIndex.length > 0}
                     onChange={toggleSelectAll}
                     className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
@@ -521,26 +521,24 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
               </tr>
             </thead>
             <tbody>
-              {filteredRows.map((row, filteredIndex) => {
-                const actualRowIndex = rows.findIndex(r => r === row)
-                return (
+              {filteredRowsWithIndex.map(({ row, originalIndex }) => (
                 <tr 
-                  key={actualRowIndex} 
-                  className={`table-row ${selectedRows.has(actualRowIndex) ? 'bg-blue-50' : ''}`}
+                  key={originalIndex} 
+                  className={`table-row ${selectedRows.has(originalIndex) ? 'bg-blue-50' : ''}`}
                 >
                   <td className="table-cell text-center align-middle">
                     <input
                       type="checkbox"
-                      checked={selectedRows.has(actualRowIndex)}
-                      onChange={() => toggleRowSelection(actualRowIndex)}
+                      checked={selectedRows.has(originalIndex)}
+                      onChange={() => toggleRowSelection(originalIndex)}
                       className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
                   </td>
                   <td className="table-cell text-gray-400 font-medium text-center align-middle">
-                    {actualRowIndex + 1}
+                    {originalIndex + 1}
                   </td>
                   {row.map((cell, colIndex) => {
-                    const style = getCellStyleByKey(actualRowIndex + 1, colIndex)
+                    const style = getCellStyleByKey(originalIndex + 1, colIndex)
                     const hasDiagonal = hasDiagonalBorder(style)
                     
                     return (
@@ -548,9 +546,9 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
                         key={colIndex}
                         className="table-cell text-center align-middle"
                         style={getCellStyle(style)}
-                        onClick={() => startEdit(actualRowIndex, colIndex, cell)}
+                        onClick={() => startEdit(originalIndex, colIndex, cell)}
                       >
-                        {editingCell?.row === actualRowIndex && editingCell?.col === colIndex ? (
+                        {editingCell?.row === originalIndex && editingCell?.col === colIndex ? (
                           <div className="flex items-center gap-1 justify-center">
                             <input
                               type="text"
@@ -584,11 +582,11 @@ export default function ExcelEditor({ data, onBack, userId }: ExcelEditorProps) 
                     )
                   })}
                 </tr>
-              )})}
+              ))}
             </tbody>
           </table>
         </div>
-        {filteredRows.length === 0 && (
+        {filteredRowsWithIndex.length === 0 && (
           <div className="empty-state py-12">
             <Table className="w-12 h-12 text-gray-300 mb-4" />
             <p className="text-gray-500">
