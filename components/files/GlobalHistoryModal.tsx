@@ -33,6 +33,7 @@ interface EditHistoryItem {
   created_at: string
   user_name: string
   user_email: string
+  user_role: string
   file_name: string
 }
 
@@ -78,7 +79,7 @@ export default function GlobalHistoryModal({ onClose }: GlobalHistoryModalProps)
           new_value,
           description,
           created_at,
-          profiles(full_name, email),
+          profiles(full_name, email, role),
           excel_files(file_name)
         `, { count: 'exact' })
         .order('created_at', { ascending: false })
@@ -92,22 +93,37 @@ export default function GlobalHistoryModal({ onClose }: GlobalHistoryModalProps)
 
       if (error) throw error
 
-      const formattedHistory = (data || []).map((item: any) => ({
-        id: item.id,
-        file_id: item.file_id,
-        user_id: item.user_id,
-        action: item.action,
-        row_index: item.row_index,
-        col_index: item.col_index,
-        field_name: item.field_name,
-        old_value: item.old_value,
-        new_value: item.new_value,
-        description: item.description,
-        created_at: item.created_at,
-        user_name: item.profiles?.full_name || item.profiles?.email || '未知用户',
-        user_email: item.profiles?.email || '',
-        file_name: item.excel_files?.file_name || '未知文件',
-      }))
+      const formattedHistory = (data || []).map((item: any) => {
+        const userRole = item.profiles?.role || 'user'
+        const isAdmin = userRole === 'admin'
+        let displayName = '未知用户'
+        
+        if (isAdmin) {
+          displayName = '管理员'
+        } else if (item.profiles?.full_name) {
+          displayName = item.profiles.full_name
+        } else if (item.profiles?.email) {
+          displayName = item.profiles.email
+        }
+        
+        return {
+          id: item.id,
+          file_id: item.file_id,
+          user_id: item.user_id,
+          action: item.action,
+          row_index: item.row_index,
+          col_index: item.col_index,
+          field_name: item.field_name,
+          old_value: item.old_value,
+          new_value: item.new_value,
+          description: item.description,
+          created_at: item.created_at,
+          user_name: displayName,
+          user_email: item.profiles?.email || '',
+          user_role: userRole,
+          file_name: item.excel_files?.file_name || '未知文件',
+        }
+      })
 
       setHistory(formattedHistory)
       setTotalCount(count || 0)
@@ -311,10 +327,10 @@ export default function GlobalHistoryModal({ onClose }: GlobalHistoryModalProps)
                       
                       <div className="text-right flex-shrink-0">
                         <div className="flex items-center gap-1.5 text-sm text-gray-300 mb-1">
-                          <div className="w-6 h-6 bg-gradient-to-br from-purple-600 to-pink-700 rounded-full flex items-center justify-center">
+                          <div className={`w-6 h-6 rounded-full flex items-center justify-center ${item.user_role === 'admin' ? 'bg-gradient-to-br from-amber-500 to-orange-600' : 'bg-gradient-to-br from-purple-600 to-pink-700'}`}>
                             <UserIcon className="w-3 h-3 text-white" />
                           </div>
-                          <span className="font-medium">{item.user_name}</span>
+                          <span className={`font-medium ${item.user_role === 'admin' ? 'text-amber-400' : ''}`}>{item.user_name}</span>
                         </div>
                         <div className="flex items-center gap-1 text-xs text-gray-500">
                           <Calendar className="w-3 h-3" />
