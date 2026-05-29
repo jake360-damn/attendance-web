@@ -312,21 +312,26 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
           })
           .eq('id', rawDataId)
 
-        await supabase
-          .from('edit_history')
-          .insert({
-            file_id: file.id,
-            user_id: currentUser?.id,
-            action: 'update',
-            row_index: isHeaderEdit ? 0 : row,
-            col_index: col,
-            field_name: isHeaderEdit ? '表头' : headers[col],
-            old_value: String(oldValue || ''),
-            new_value: String(editValue || ''),
-            description: isHeaderEdit 
-              ? `修改了表头 "${oldValue}" 为 "${editValue}"`
-              : `修改了第 ${row + 1} 行的 "${headers[col]}" 字段`,
-          })
+        if (currentUser?.id) {
+          const { error: historyError } = await supabase
+            .from('edit_history')
+            .insert({
+              file_id: file.id,
+              user_id: currentUser.id,
+              action: 'update',
+              row_index: isHeaderEdit ? 0 : row,
+              col_index: col,
+              field_name: isHeaderEdit ? '表头' : headers[col],
+              old_value: String(oldValue || ''),
+              new_value: String(editValue || ''),
+              description: isHeaderEdit 
+                ? `修改了表头 "${oldValue}" 为 "${editValue}"`
+                : `修改了第 ${row + 1} 行的 "${headers[col]}" 字段`,
+            })
+          if (historyError) {
+            console.error('记录修改历史失败:', historyError)
+          }
+        }
       } catch (error) {
         console.error('更新数据失败:', error)
       }
@@ -393,14 +398,19 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
         })
         .eq('id', rawDataId)
 
-      await supabase
-        .from('edit_history')
-        .insert({
-          file_id: file.id,
-          user_id: currentUser?.id,
-          action: 'delete',
-          description: `删除了 ${deletedRowIndices.length} 行数据（原第 ${deletedRowIndices.map(i => i + 1).join(', ')} 行）`,
-        })
+      if (currentUser?.id) {
+        const { error: historyError } = await supabase
+          .from('edit_history')
+          .insert({
+            file_id: file.id,
+            user_id: currentUser.id,
+            action: 'delete',
+            description: `删除了 ${deletedRowIndices.length} 行数据（原第 ${deletedRowIndices.map(i => i + 1).join(', ')} 行）`,
+          })
+        if (historyError) {
+          console.error('记录删除历史失败:', historyError)
+        }
+      }
 
       setAllData(newAllData)
       setRowHeights(newRowHeights)
