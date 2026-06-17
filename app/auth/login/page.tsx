@@ -183,12 +183,32 @@ export default function LoginPage() {
     setError('')
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
       if (error) throw error
+
+      // 确保用户 profile 存在
+      if (data.user) {
+        const { data: existingProfile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', data.user.id)
+          .single()
+
+        if (!existingProfile) {
+          await supabase
+            .from('profiles')
+            .insert({
+              id: data.user.id,
+              email: data.user.email || '',
+              full_name: data.user.user_metadata?.name || data.user.user_metadata?.full_name || '',
+              role: 'user',
+            })
+        }
+      }
 
       router.push('/dashboard')
       router.refresh()

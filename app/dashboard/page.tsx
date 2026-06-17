@@ -68,14 +68,26 @@ export default function DashboardPage() {
         if (profile) {
           setUser(profile as User)
         } else {
-          setUser({
+          // profile 不存在，自动创建
+          const newProfile = {
             id: session.user.id,
             email: session.user.email || '',
-            full_name: session.user.user_metadata?.full_name || '',
-            role: 'user',
+            full_name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || '',
+            role: 'user' as const,
             created_at: session.user.created_at || new Date().toISOString(),
             updated_at: new Date().toISOString(),
-          } as User)
+          }
+
+          await supabase
+            .from('profiles')
+            .insert({
+              id: newProfile.id,
+              email: newProfile.email,
+              full_name: newProfile.full_name,
+              role: newProfile.role,
+            })
+
+          setUser(newProfile as User)
         }
       } catch (error) {
         console.error('Error checking user:', error)

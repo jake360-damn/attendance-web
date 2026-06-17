@@ -330,7 +330,10 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
             })
           if (historyError) {
             console.error('记录修改历史失败:', historyError)
+            console.error('错误详情:', JSON.stringify(historyError, null, 2))
           }
+        } else {
+          console.warn('无法记录修改历史: currentUser.id 为空', currentUser)
         }
       } catch (error) {
         console.error('更新数据失败:', error)
@@ -343,7 +346,7 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
     setEditValue('')
   }
 
-  const addRow = () => {
+  const addRow = async () => {
     if (!canEdit) return
     const newRow = new Array(headers.length).fill('')
     const newAllData = [...allData, newRow]
@@ -356,6 +359,39 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
       rowHeights: [...rowHeights, DEFAULT_ROW_HEIGHT],
       merges
     })
+
+    // 自动保存新行到数据库并记录历史
+    if (supabase && rawDataId) {
+      try {
+        const newHeaders = newAllData[0]
+        const newRows = newAllData.slice(1)
+        await supabase
+          .from('excel_data_raw')
+          .update({
+            all_data: newAllData,
+            headers: newHeaders,
+            rows: newRows
+          })
+          .eq('id', rawDataId)
+
+        if (currentUser?.id) {
+          const { error: historyError } = await supabase
+            .from('edit_history')
+            .insert({
+              file_id: file.id,
+              user_id: currentUser.id,
+              action: 'create',
+              row_index: newAllData.length - 2,
+              description: `新增了第 ${newRows.length} 行数据`,
+            })
+          if (historyError) {
+            console.error('记录新增行历史失败:', historyError)
+          }
+        }
+      } catch (error) {
+        console.error('保存新增行失败:', error)
+      }
+    }
   }
 
   const toggleRowSelection = (rowIndex: number) => {
@@ -409,7 +445,10 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
           })
         if (historyError) {
           console.error('记录删除历史失败:', historyError)
+          console.error('错误详情:', JSON.stringify(historyError, null, 2))
         }
+      } else {
+        console.warn('无法记录删除历史: currentUser.id 为空', currentUser)
       }
 
       setAllData(newAllData)
@@ -456,6 +495,21 @@ export default function FileViewer({ file, currentUser, onBack, onViewHistory }:
           updated_at: new Date().toISOString()
         })
         .eq('id', file.id)
+
+      // 记录保存历史
+      if (currentUser?.id) {
+        const { error: historyError } = await supabase
+          .from('edit_history')
+          .insert({
+            file_id: file.id,
+            user_id: currentUser.id,
+            action: 'update',
+            description: `保存了文件修改，当前共 ${rows.length} 行数据`,
+          })
+        if (historyError) {
+          console.error('记录保存历史失败:', historyError)
+        }
+      }
 
       alert('保存成功！')
     } catch (error) {
